@@ -51,7 +51,7 @@ export default function VoucherList({
   const [isMounted, setIsMounted] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCountry, setSelectedCountry] = useState("All");
+  const [selectedCountry] = useState("All");
   const [vouchersPerPage] = useState(50);
   // Calculate the indexes for the current page
   const indexOfLastVoucher = currentPage * vouchersPerPage;
