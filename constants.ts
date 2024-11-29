@@ -10,7 +10,17 @@ export interface _Voucher {
   DisplayRate: number;
   FinalRate: number;
   SaleEntryDate: string;
-  FinPrefix:string;
+  FinFromDate: string;
+  FinToDate: string;
+  FinPrefix: string;
+  pax: number;
+  Add1: string;
+  Add2: string;
+  Pin: string;
+  Country: string;
+  CityName: string;
+  Phone: string;
+  Email: string;
 }
 
 // export const _vouchers:_Voucher[] = [

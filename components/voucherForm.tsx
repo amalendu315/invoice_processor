@@ -16,6 +16,7 @@ const VoucherForm = () => {
   const [vouchers, setVouchers] = useState<_Voucher[]>([]);
   const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 
+
   // useEffect(() => {
   //   let intervalId: ReturnType<typeof setInterval> | undefined;
   //   if (autoPushEnabled) {
@@ -63,7 +64,6 @@ const VoucherForm = () => {
         setVouchers(data?.data);
         toast.success("Fetched Data For Selected Range!");
       }
-      // console.log('data', data?.data)
 
       setIsSalesLoading(false);
     } catch (error) {
@@ -84,6 +84,14 @@ const VoucherForm = () => {
           .slice(i, i + vouchersPerRequest)
           .map((index) => {
             const voucher = vouchers[index];
+
+            // Conditional logic for Nepal vouchers (moved outside the return statements)
+            let ledgerName = voucher.AccountName;
+            if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
+              ledgerName = "Air IQ Nepal";
+            }
+
+            // Construct voucherDetails (now common for all vouchers)
             return {
               branchName: "AirIQ",
               vouchertype: "Sales",
@@ -92,11 +100,12 @@ const VoucherForm = () => {
                 /-/g,
                 "/"
               ),
-              narration: voucher.Pnr,
+              narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
               ledgerAllocation: [
                 {
                   lineno: 1,
-                  ledgerName: voucher.AccountName,
+                  ledgerName: ledgerName, // Use the conditionally set ledgerName
+                  ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
                   amount: voucher.FinalRate.toFixed(2),
                   drCr: "dr",
                 },
@@ -109,7 +118,6 @@ const VoucherForm = () => {
               ],
             };
           });
-
         const response = await fetch("/api/cloud", {
           method: "POST",
           headers: {
@@ -147,6 +155,7 @@ const VoucherForm = () => {
       setIsCloudLoading(false);
     }
   };
+
   return (
     <>
       <Card>
@@ -181,6 +190,13 @@ const VoucherForm = () => {
             >
               Fetch Sales Entries
             </Button>
+            {/* <Button
+              className="mt-5"
+              onClick={handleFetchPurchaseEntries}
+              disabled={isSalesLoading}
+            >
+              Fetch Purchase Entries
+            </Button> */}
             <Button
               className="mt-5"
               onClick={handleSubmitToCloud}

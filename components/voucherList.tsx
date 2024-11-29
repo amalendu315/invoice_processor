@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface Voucher {
   InvoiceID: number;
@@ -24,7 +25,17 @@ interface Voucher {
   DisplayRate: number;
   FinalRate: number;
   SaleEntryDate: string;
+  FinFromDate: string;
+  FinToDate: string;
   FinPrefix: string;
+  pax: number;
+  Add1: string;
+  Add2: string;
+  Pin: string;
+  Country: string;
+  CityName: string;
+  Phone: string;
+  Email: string;
 }
 
 interface VoucherListProps {
@@ -41,14 +52,21 @@ export default function VoucherList({
   const [isMounted, setIsMounted] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCountry, setSelectedCountry] = useState("All");
   const [vouchersPerPage] = useState(50);
   // Calculate the indexes for the current page
   const indexOfLastVoucher = currentPage * vouchersPerPage;
   const indexOfFirstVoucher = indexOfLastVoucher - vouchersPerPage;
-  const currentVouchers = useMemo(
-    () => vouchers.slice(indexOfFirstVoucher, indexOfLastVoucher),
-    [vouchers, indexOfFirstVoucher, indexOfLastVoucher]
-  );
+  const filteredVouchers = useMemo(() => {
+    return vouchers.filter(
+      (voucher) =>
+        selectedCountry === "All" || voucher.Country?.toLowerCase() === selectedCountry.toLowerCase()
+    );
+  }, [vouchers, selectedCountry]);
+
+  const currentVouchers = useMemo(() => {
+    return filteredVouchers.slice(indexOfFirstVoucher, indexOfLastVoucher);
+  }, [filteredVouchers, indexOfFirstVoucher, indexOfLastVoucher]);
 
   //@ts-expect-error due to index
   const handleCheckboxChange = (index) => {
@@ -92,7 +110,7 @@ export default function VoucherList({
               <TableHead>Sale ID</TableHead> {/* Added Sale ID */}
               <TableHead>Invoice Entry Date</TableHead>
               {/* Added Invoice Entry Date */}
-              <TableHead>Prefix</TableHead> {/* Added Prefix */}
+              <TableHead>Country</TableHead> {/* Added Prefix */}
               <TableHead>PNR</TableHead>
               <TableHead>Account Name</TableHead>
               <TableHead>Fin Prefix</TableHead> {/* Added Display Rate */}
@@ -120,7 +138,10 @@ export default function VoucherList({
                   )}
                 </TableCell>
                 {/* Added Invoice Entry Date */}
-                <TableCell>{voucher.Prefix}</TableCell> {/* Added Prefix */}
+                <TableCell>
+                  {voucher.Country ? `${voucher.CityName}, ${voucher.Country}` : voucher.CityName}
+                </TableCell>{" "}
+                {/* Added Prefix */}
                 <TableCell>{voucher.Pnr}</TableCell>
                 <TableCell>{voucher.AccountName}</TableCell>
                 <TableCell>{voucher.FinPrefix}</TableCell>
