@@ -12,7 +12,6 @@ const SideHeader = () => {
   const {
     lastUpdatedVoucherDate,
     submissionDate,
-    lastUpdatedVoucher,
     pushedVoucherRanges,
   } = useContext(VoucherContext);
 
@@ -67,7 +66,6 @@ const SideHeader = () => {
                 )}
               </ul>
             </div>
-            {/* Add any other details you want to display */}
           </div>
         </>
       )}
