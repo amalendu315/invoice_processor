@@ -30,6 +30,15 @@ export async function POST(request: Request) {
       }
     );
 
+    response?.data.map((r)=>{
+      if (r.statusmessage === "voucher number not found.") {
+        return NextResponse.json({
+          error:r.statusmessage,
+          status:r.statuscode,
+        })
+      }
+    })
+
     return NextResponse.json(response?.data);
   } catch (error) {
     console.error("Error submitting data:", error);

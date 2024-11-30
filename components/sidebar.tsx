@@ -2,12 +2,19 @@
 
 "use client";
 import React, { useContext } from "react";
+
+import { format } from "date-fns";
 import VoucherContext from "@/context/VoucherContext";
 import AuthContext from "@/context/AuthContext";
 
 const SideHeader = () => {
-  const { isAuthenticated } = useContext(AuthContext)
-  const { lastUpdatedVoucherDate, submissionDate, lastUpdatedVoucher } = useContext(VoucherContext);
+  const { isAuthenticated } = useContext(AuthContext);
+  const {
+    lastUpdatedVoucherDate,
+    submissionDate,
+    lastUpdatedVoucher,
+    pushedVoucherRanges,
+  } = useContext(VoucherContext);
 
   return (
     <aside className="bg-gray-800 text-white p-4 w-64 h-screen fixed top-0 left-0 flex flex-col justify-center items-center gap-8">
@@ -27,12 +34,39 @@ const SideHeader = () => {
                 {submissionDate || "N/A"}
               </span>
             </p>
-            <p className="flex flex-col items-center justify-center">
-              Last Updated Invoice Number:{" "}
-              <span className="text-md font-bold text-green-500">
-                {lastUpdatedVoucher?.InvoiceNo ?? "N/A"}
-              </span>
-            </p>
+            <div className="flex flex-col items-center justify-center">
+              <h3>Pushed Voucher Ranges:</h3>
+              <ul className="">
+                {Object.entries(pushedVoucherRanges).map(
+                  ([key, range]) =>
+                    range?.startVoucher !== range?.endVoucher && (
+                      <li
+                        key={key}
+                        className="text-md font-bold text-green-500"
+                      >
+                        {range.startDate} - {range.endDate}:{" "}
+                        {range.startVoucher} - {range.endVoucher}
+                      </li>
+                    )
+                )}
+                {Object.entries(pushedVoucherRanges).map(
+                  ([key, range]) =>
+                    range?.startVoucher === range?.endVoucher && (
+                      <li
+                        key={key}
+                        className="text-md font-bold text-green-500"
+                      >
+                        {format(new Date(range.startDate), "MM/dd/yyyy")} -{" "}
+                        {format(
+                          new Date(range.endDate),
+                          "MM/dd/yyyy"
+                        )}
+                        : {range.startVoucher}
+                      </li>
+                    )
+                )}
+              </ul>
+            </div>
             {/* Add any other details you want to display */}
           </div>
         </>

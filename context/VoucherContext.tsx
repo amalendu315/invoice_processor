@@ -1,6 +1,18 @@
 "use client";
+// VoucherContext.tsx
 import { _Voucher } from "@/constants";
 import { createContext, useState, useEffect } from "react";
+
+// Define a type for the pushed voucher ranges
+type PushedVoucherRanges = {
+  [key: string]: {
+    // The key could be a combination of startDate and endDate, or a unique identifier
+    startDate: string;
+    endDate: string;
+    startVoucher: number;
+    endVoucher: number;
+  };
+};
 
 const VoucherContext = createContext<{
   lastUpdatedVoucher: _Voucher | null;
@@ -9,6 +21,8 @@ const VoucherContext = createContext<{
   setLastUpdatedVoucherDate: (date: string) => void;
   submissionDate: string;
   setSubmissionDate: (date: string) => void;
+  pushedVoucherRanges: PushedVoucherRanges;
+  setPushedVoucherRanges: (ranges: PushedVoucherRanges) => void;
 }>({
   lastUpdatedVoucher: null,
   setLastUpdatedVoucher: () => {},
@@ -16,6 +30,8 @@ const VoucherContext = createContext<{
   setLastUpdatedVoucherDate: () => {},
   submissionDate: "",
   setSubmissionDate: () => {},
+  pushedVoucherRanges: {},
+  setPushedVoucherRanges: () => {},
 });
 
 export const VoucherProvider = ({
@@ -23,14 +39,18 @@ export const VoucherProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-   const [lastUpdatedVoucher, setLastUpdatedVoucher] =
-     useState<_Voucher | null>(null);
+  const [lastUpdatedVoucher, setLastUpdatedVoucher] = useState<_Voucher | null>(
+    null
+  );
   const [lastUpdatedVoucherDate, setLastUpdatedVoucherDate] = useState("");
   const [submissionDate, setSubmissionDate] = useState("");
+  const [pushedVoucherRanges, setPushedVoucherRanges] = useState<
+    PushedVoucherRanges
+  >({});
 
   useEffect(() => {
     const storedVoucher = localStorage.getItem("lastUpdatedVoucher");
-    if(storedVoucher){
+    if (storedVoucher) {
       setLastUpdatedVoucher(JSON.parse(storedVoucher));
     }
     const storedDate = localStorage.getItem("lastUpdatedVoucherDate");
@@ -40,6 +60,10 @@ export const VoucherProvider = ({
     const storedSubmissionDate = localStorage.getItem("submissionDate");
     if (storedSubmissionDate) {
       setSubmissionDate(storedSubmissionDate);
+    }
+    const storedPushedRanges = localStorage.getItem("pushedVoucherRanges");
+    if (storedPushedRanges) {
+      setPushedVoucherRanges(JSON.parse(storedPushedRanges));
     }
   }, []);
 
@@ -59,7 +83,12 @@ export const VoucherProvider = ({
         submissionDate,
         setSubmissionDate: (date: string) => {
           setSubmissionDate(date);
-          localStorage.setItem("submissionDate", date); // Save to localStorage
+          localStorage.setItem("submissionDate", date);
+        },
+        pushedVoucherRanges,
+        setPushedVoucherRanges: (ranges: PushedVoucherRanges) => {
+          setPushedVoucherRanges(ranges);
+          localStorage.setItem("pushedVoucherRanges", JSON.stringify(ranges));
         },
       }}
     >
