@@ -108,7 +108,6 @@ export default function VoucherList({
               <TableHead>Invoice No</TableHead>
               <TableHead>Sale ID</TableHead> {/* Added Sale ID */}
               <TableHead>Invoice Entry Date</TableHead>
-              {/* Added Invoice Entry Date */}
               <TableHead>Country</TableHead> {/* Added Prefix */}
               <TableHead>PNR</TableHead>
               <TableHead>Account Name</TableHead>
