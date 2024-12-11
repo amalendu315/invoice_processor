@@ -35,7 +35,7 @@ const SideHeader = () => {
             </p>
             <div className="flex flex-col items-center justify-center">
               <h3>Pushed Voucher Ranges:</h3>
-              <ul className="">
+              <ul className="text-center">
                 {Object.entries(pushedVoucherRanges).map(
                   ([key, range]) =>
                     range?.startVoucher !== range?.endVoucher && (

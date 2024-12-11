@@ -122,23 +122,25 @@ const VoucherForm = () => {
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
 
-        const response = await fetch("/api/cloud", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ data: dataForCloud }),
-        });
+        console.log("dataForCloud", dataForCloud);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Cloud server error:", response.status, errorText);
-          throw new Error(`Cloud server responded with status ${response.status}`);
-        } else {
-          if (i !== 0) {
-            toast.success(`${i} Vouchers Pushed!`);
-          }
-        }
+        // const response = await fetch("/api/cloud", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({ data: dataForCloud }),
+        // });
+
+        // if (!response.ok) {
+        //   const errorText = await response.text();
+        //   console.error("Cloud server error:", response.status, errorText);
+        //   throw new Error(`Cloud server responded with status ${response.status}`);
+        // } else {
+        //   if (i !== 0) {
+        //     toast.success(`${i} Vouchers Pushed!`);
+        //   }
+        // }
       }
 
       // Update pushedVoucherRanges, lastUpdatedVoucher, etc.
@@ -158,7 +160,7 @@ const VoucherForm = () => {
         const formattedDate = new Date(lastVoucherDate).toISOString().split("T")[0];
         setLastUpdatedVoucherDate(formattedDate);
       }
-
+      
       toast.success("Vouchers Submitted Successfully!");
     } catch (error) {
       console.error("Error submitting data:", error);
