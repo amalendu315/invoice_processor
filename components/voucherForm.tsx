@@ -124,23 +124,23 @@ const VoucherForm = () => {
 
         console.log("dataForCloud", dataForCloud);
 
-        // const response = await fetch("/api/cloud", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({ data: dataForCloud }),
-        // });
+        const response = await fetch("/api/cloud", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ data: dataForCloud }),
+        });
 
-        // if (!response.ok) {
-        //   const errorText = await response.text();
-        //   console.error("Cloud server error:", response.status, errorText);
-        //   throw new Error(`Cloud server responded with status ${response.status}`);
-        // } else {
-        //   if (i !== 0) {
-        //     toast.success(`${i} Vouchers Pushed!`);
-        //   }
-        // }
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Cloud server error:", response.status, errorText);
+          throw new Error(`Cloud server responded with status ${response.status}`);
+        } else {
+          if (i !== 0) {
+            toast.success(`${i} Vouchers Pushed!`);
+          }
+        }
       }
 
       // Update pushedVoucherRanges, lastUpdatedVoucher, etc.
