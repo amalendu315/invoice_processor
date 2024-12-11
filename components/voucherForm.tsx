@@ -41,7 +41,8 @@ const VoucherForm = () => {
           (a, b) => a.InvoiceNo - b.InvoiceNo
         ); 
         setVouchers(sortedVouchers);
-        toast.success("Fetched Data For Selected Range!");
+        const length = sortedVouchers?.length;
+        toast.success(`Total ${length} vouchers fetched for the selected range!`);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -121,8 +122,6 @@ const VoucherForm = () => {
           toast.error(`Some selected vouchers are already pushed!`);
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
-
-        console.log("dataForCloud", dataForCloud);
 
         const response = await fetch("/api/cloud", {
           method: "POST",
