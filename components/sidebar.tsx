@@ -15,6 +15,15 @@ const SideHeader = () => {
     pushedVoucherRanges,
   } = useContext(VoucherContext);
 
+  function getRandomColor() {
+    const letters = "0123456789ABCDEF";
+    let color = "#";
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
   return (
     <aside className="bg-gray-800 text-white p-4 w-64 h-screen fixed top-0 left-0 flex flex-col justify-center items-center gap-8">
       {isAuthenticated && (
@@ -34,36 +43,37 @@ const SideHeader = () => {
               </span>
             </p>
             <div className="flex flex-col items-center justify-center">
-              <h3>Pushed Voucher Ranges:</h3>
+              <h3 className="text-center mb-3">
+                Tally Entry Dates with Voucher Ranges:
+              </h3>
               <ul className="text-center">
                 {Object.entries(pushedVoucherRanges).map(
                   ([key, range]) =>
                     range?.startVoucher !== range?.endVoucher && (
                       <li
                         key={key}
-                        className="text-md font-bold text-green-500"
+                        className="text-md font-bold"
+                        style={{ color: getRandomColor() }}
                       >
                         {range.startDate} - {range.endDate}:{" "}
                         {range.startVoucher} - {range.endVoucher}
                       </li>
                     )
                 )}
-                {Object.entries(pushedVoucherRanges).map(
+                {/* {Object.entries(pushedVoucherRanges).map(
                   ([key, range]) =>
                     range?.startVoucher === range?.endVoucher && (
                       <li
                         key={key}
-                        className="text-md font-bold text-green-500"
+                        className={`text-md font-bold `}
+                        style={{ color: getRandomColor() }}
                       >
                         {format(new Date(range.startDate), "MM/dd/yyyy")} -{" "}
-                        {format(
-                          new Date(range.endDate),
-                          "MM/dd/yyyy"
-                        )}
-                        : {range.startVoucher}
+                        {format(new Date(range.endDate), "MM/dd/yyyy")}:{" "}
+                        {range.startVoucher}
                       </li>
                     )
-                )}
+                )} */}
               </ul>
             </div>
           </div>

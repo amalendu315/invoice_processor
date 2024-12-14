@@ -7,6 +7,7 @@ import Footer from "@/components/footer";
 import { VoucherProvider } from "@/context/VoucherContext";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/context/AuthContext";
+import { SumProvider } from "@/context/SumContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,10 +38,12 @@ export default function RootLayout({
       >
         <VoucherProvider>
           <AuthProvider>
-            <Header />
-            {children}
-            <Footer />
-            <Toaster position="top-center" />
+            <SumProvider>
+              <Header />
+              {children}
+              <Footer />
+              <Toaster position="top-center" />
+            </SumProvider>
           </AuthProvider>
         </VoucherProvider>
       </body>

@@ -113,7 +113,7 @@ export default function VoucherList({
               <TableHead>Account Name</TableHead>
               <TableHead>Fin Prefix</TableHead> {/* Added Display Rate */}
               <TableHead>Final Rate</TableHead>
-              <TableHead>Sale Entry Date</TableHead>{" "}
+              <TableHead>Sale Entry Date</TableHead>
               {/* Added Sale Entry Date */}
             </TableRow>
           </TableHeader>
@@ -137,14 +137,21 @@ export default function VoucherList({
                 </TableCell>
                 {/* Added Invoice Entry Date */}
                 <TableCell>
-                  {voucher.Country ? `${voucher.CityName}, ${voucher.Country}` : voucher.CityName}
+                  {voucher.Country
+                    ? `${voucher.CityName}, ${voucher.Country}`
+                    : voucher.CityName}
                 </TableCell>{" "}
                 {/* Added Prefix */}
                 <TableCell>{voucher.Pnr}</TableCell>
                 <TableCell>{voucher.AccountName}</TableCell>
                 <TableCell>{voucher.FinPrefix}</TableCell>
                 {/* Added Display Rate */}
-                <TableCell>{voucher.FinalRate}</TableCell>
+                <TableCell>
+                  {new Intl.NumberFormat("en-IN", {
+                    style: "currency",
+                    currency: "INR",
+                  }).format(voucher.FinalRate)}
+                </TableCell>
                 <TableCell>
                   {format(
                     new Date(voucher.SaleEntryDate),

@@ -3,6 +3,7 @@
 // VoucherForm.tsx
 "use client";
 import React, { useState } from "react";
+import {format} from 'date-fns';
 import { Card, CardContent } from "./ui/card";
 import VoucherList from "./voucherList";
 import { Button } from "./ui/button";
@@ -10,6 +11,7 @@ import { Input } from "./ui/input";
 import toast from "react-hot-toast";
 import { _Voucher } from "@/constants";
 import VoucherContext from "@/context/VoucherContext";
+import SumContext from "@/context/SumContext";
 
 const VoucherForm = () => {
   const { 
@@ -19,6 +21,8 @@ const VoucherForm = () => {
     setPushedVoucherRanges, 
     pushedVoucherRanges 
   } = React.useContext(VoucherContext);
+
+  const {setTotalSum} = React.useContext(SumContext);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
@@ -39,10 +43,19 @@ const VoucherForm = () => {
       } else {
         const sortedVouchers = [...data.data].sort(
           (a, b) => a.InvoiceNo - b.InvoiceNo
-        ); 
+        );
         setVouchers(sortedVouchers);
+        const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
+          // Ensure finalRate is a number before adding
+          const voucherFinalRate =
+            typeof voucher.FinalRate === "number" ? voucher.FinalRate : 0;
+          return acc + voucherFinalRate;
+        }, 0); // Initial accumulator value
+        setTotalSum(totalFinalRate);
         const length = sortedVouchers?.length;
-        toast.success(`Total ${length} vouchers fetched for the selected range!`);
+        toast.success(
+          `Total ${length} vouchers fetched for the selected range!`
+        );
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -93,7 +106,7 @@ const VoucherForm = () => {
              return {
                   branchName: "AirIQ",
                   vouchertype: "Sales",
-                  voucherno: `${voucher.FinPrefix}/${voucher.InvoiceNo}`,
+                  voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
                   voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
                     /-/g,
                     "/"
@@ -122,7 +135,6 @@ const VoucherForm = () => {
           toast.error(`Some selected vouchers are already pushed!`);
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
-
         const response = await fetch("/api/cloud", {
           method: "POST",
           headers: {
@@ -146,8 +158,14 @@ const VoucherForm = () => {
       setPushedVoucherRanges({
         ...pushedVoucherRanges,
         [rangeKey]: {
-          startDate: dateRange.start,
-          endDate: dateRange.end,
+          startDate: format(
+            new Date(firstSelectedVoucher.SaleEntryDate),
+            "dd/MM/yyyy"
+          ),
+          endDate: format(
+            new Date(lastSelectedVoucher.SaleEntryDate),
+            "dd/MM/yyyy"
+          ),
           startVoucher: firstSelectedVoucher.InvoiceNo,
           endVoucher: lastSelectedVoucher.InvoiceNo,
         },
