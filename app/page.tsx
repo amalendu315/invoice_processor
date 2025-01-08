@@ -50,7 +50,7 @@ export default function Home() {
       password === defaultLoginCreds.password
     ) {
       const token = generateToken();
-      const expirationTime = new Date().getTime() + 20 * 60 * 1000;
+      const expirationTime = new Date().getTime() + 60 * 60 * 1000;
       setIsAuthenticated(true);
       localStorage.setItem("token", token);
       localStorage.setItem("tokenExpiration", `${expirationTime}`);
