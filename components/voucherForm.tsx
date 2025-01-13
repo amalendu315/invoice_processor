@@ -1,9 +1,6 @@
-
-
-// VoucherForm.tsx
 "use client";
 import React, { useState } from "react";
-import {format} from 'date-fns';
+import { format } from "date-fns";
 import { Card, CardContent } from "./ui/card";
 import VoucherList from "./voucherList";
 import { Button } from "./ui/button";
@@ -12,17 +9,18 @@ import toast from "react-hot-toast";
 import { _Voucher } from "@/constants";
 import VoucherContext from "@/context/VoucherContext";
 import SumContext from "@/context/SumContext";
+import * as XLSX from "xlsx"; // Import xlsx library
 
 const VoucherForm = () => {
-  const { 
-    setLastUpdatedVoucherDate, 
-    setSubmissionDate, 
-    setLastUpdatedVoucher, 
-    setPushedVoucherRanges, 
-    pushedVoucherRanges 
+  const {
+    setLastUpdatedVoucherDate,
+    setSubmissionDate,
+    setLastUpdatedVoucher,
+    setPushedVoucherRanges,
+    pushedVoucherRanges,
   } = React.useContext(VoucherContext);
 
-  const {setTotalSum} = React.useContext(SumContext);
+  const { setTotalSum } = React.useContext(SumContext);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
@@ -46,11 +44,12 @@ const VoucherForm = () => {
         );
         setVouchers(sortedVouchers);
         const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
-          // Ensure finalRate is a number before adding
           const voucherFinalRate =
-            typeof voucher.FinalRate === "number" ? voucher.FinalRate*voucher.pax : 0;
+            typeof voucher.FinalRate === "number"
+              ? voucher.FinalRate * voucher.pax
+              : 0;
           return acc + voucherFinalRate;
-        }, 0); // Initial accumulator value
+        }, 0);
         setTotalSum(totalFinalRate);
         const length = sortedVouchers?.length;
         toast.success(
@@ -65,8 +64,33 @@ const VoucherForm = () => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (vouchers.length === 0) {
+      toast.error("No data available to export!");
+      return;
+    }
+
+    const formattedData = vouchers.map((voucher) => ({
+      InvoiceNo: voucher.InvoiceNo,
+      SaleEntryDate: voucher.SaleEntryDate,
+      Pnr: voucher.Pnr,
+      Pax: voucher.pax,
+      AccountName: voucher.AccountName,
+      Country: voucher.Country,
+      FinalRate: voucher.FinalRate,
+      TotalAmount: voucher.FinalRate * voucher.pax,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vouchers");
+    XLSX.writeFile(workbook, "Vouchers.xlsx");
+
+    toast.success("Excel file has been downloaded successfully!");
+  };
+
   const handleSubmitToCloud = async () => {
-    if (selectedEntries.length <= 0) { 
+    if (selectedEntries.length <= 0) {
       toast.error(`Please select at least one voucher to push!`);
       return;
     }
@@ -78,7 +102,8 @@ const VoucherForm = () => {
       setSubmissionDate(currentDate);
 
       const firstSelectedVoucher = vouchers[selectedEntries[0]];
-      const lastSelectedVoucherIndex = selectedEntries[selectedEntries.length - 1];
+      const lastSelectedVoucherIndex =
+        selectedEntries[selectedEntries.length - 1];
       const lastSelectedVoucher = vouchers[lastSelectedVoucherIndex];
 
       const rangeKey = `${dateRange.start}-${dateRange.end}`;
@@ -90,48 +115,48 @@ const VoucherForm = () => {
             const voucher = vouchers[index];
 
             if (
-              pushedVoucherRanges[rangeKey] && 
-              (voucher.InvoiceNo === pushedVoucherRanges[rangeKey].startVoucher || 
-               voucher.InvoiceNo === pushedVoucherRanges[rangeKey].endVoucher)
+              pushedVoucherRanges[rangeKey] &&
+              (voucher.InvoiceNo ===
+                pushedVoucherRanges[rangeKey].startVoucher ||
+                voucher.InvoiceNo === pushedVoucherRanges[rangeKey].endVoucher)
             ) {
               toast.error(`Voucher ${voucher.InvoiceNo} already pushed!`);
-              return undefined; // Return undefined for already pushed vouchers
-            } 
+              return undefined;
+            }
 
             let ledgerName = voucher.AccountName;
             if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
               ledgerName = "Air IQ Nepal";
             }
 
-             return {
-                  branchName: "AirIQ",
-                  vouchertype: "Sales",
-                  voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
-                  voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
-                    /-/g,
-                    "/"
-                  ),
-                  narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
-                  ledgerAllocation: [
-                    {
-                      lineno: 1,
-                      ledgerName: ledgerName,
-                      ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
-                      amount: (voucher.FinalRate * voucher.pax).toFixed(2),
-                      drCr: "dr",
-                    },
-                    {
-                      lineno: 2,
-                      ledgerName: "Domestic Base Fare",
-                      amount: (voucher.FinalRate * voucher.pax).toFixed(2),
-                      drCr: "cr",
-                    },
-                  ],
-                };
+            return {
+              branchName: "AirIQ",
+              vouchertype: "Sales",
+              voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
+              voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
+                /-/g,
+                "/"
+              ),
+              narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
+              ledgerAllocation: [
+                {
+                  lineno: 1,
+                  ledgerName: ledgerName,
+                  ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
+                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                  drCr: "dr",
+                },
+                {
+                  lineno: 2,
+                  ledgerName: "Domestic Base Fare",
+                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                  drCr: "cr",
+                },
+              ],
+            };
           });
 
-        // Check if any voucher is undefined (already pushed)
-        if (dataForCloud.some(voucher => voucher === undefined)) {
+        if (dataForCloud.some((voucher) => voucher === undefined)) {
           toast.error(`Some selected vouchers are already pushed!`);
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
@@ -146,7 +171,9 @@ const VoucherForm = () => {
         if (!response.ok) {
           const errorText = await response.text();
           console.error("Cloud server error:", response.status, errorText);
-          throw new Error(`Cloud server responded with status ${response.status}`);
+          throw new Error(
+            `Cloud server responded with status ${response.status}`
+          );
         } else {
           if (i !== 0) {
             toast.success(`${i} Vouchers Pushed!`);
@@ -154,7 +181,6 @@ const VoucherForm = () => {
         }
       }
 
-      // Update pushedVoucherRanges, lastUpdatedVoucher, etc.
       setPushedVoucherRanges({
         ...pushedVoucherRanges,
         [rangeKey]: {
@@ -174,10 +200,12 @@ const VoucherForm = () => {
       setLastUpdatedVoucher(lastSelectedVoucher);
       const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
       if (lastVoucherDate) {
-        const formattedDate = new Date(lastVoucherDate).toISOString().split("T")[0];
+        const formattedDate = new Date(lastVoucherDate)
+          .toISOString()
+          .split("T")[0];
         setLastUpdatedVoucherDate(formattedDate);
       }
-      
+
       toast.success("Vouchers Submitted Successfully!");
     } catch (error) {
       console.error("Error submitting data:", error);
@@ -191,7 +219,7 @@ const VoucherForm = () => {
     <>
       <Card>
         <CardContent>
-          <div className="grid grid-cols-4 gap-4 pt-4 items-center ">
+          <div className="grid grid-cols-5 gap-4 pt-4 items-center ">
             <div>
               <label htmlFor="startDate">Start Date:</label>
               <Input
@@ -221,19 +249,15 @@ const VoucherForm = () => {
             >
               Fetch Sales Entries
             </Button>
-            {/* <Button
-              className="mt-5"
-              onClick={handleFetchPurchaseEntries}
-              disabled={isSalesLoading}
-            >
-              Fetch Purchase Entries
-            </Button> */}
             <Button
               className="mt-5"
               onClick={handleSubmitToCloud}
               disabled={isCloudLoading}
             >
               Submit to Cloud
+            </Button>
+            <Button className="mt-5" onClick={handleExportToExcel}>
+              Export to Excel
             </Button>
           </div>
         </CardContent>
@@ -246,7 +270,7 @@ const VoucherForm = () => {
         />
       )}
     </>
-  )
+  );
 };
 
 export default VoucherForm;
