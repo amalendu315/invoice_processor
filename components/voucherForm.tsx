@@ -22,7 +22,7 @@ const VoucherForm = () => {
     pushedVoucherRanges 
   } = React.useContext(VoucherContext);
 
-  const {setTotalSum} = React.useContext(SumContext);
+  const {totalSum,setTotalSum} = React.useContext(SumContext);
 
   const [isSalesLoading, setIsSalesLoading] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
@@ -48,7 +48,7 @@ const VoucherForm = () => {
         const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
           // Ensure finalRate is a number before adding
           const voucherFinalRate =
-            typeof voucher.FinalRate === "number" ? voucher.FinalRate : 0;
+            typeof voucher.FinalRate === "number" ? voucher.FinalRate*voucher.pax : 0;
           return acc + voucherFinalRate;
         }, 0); // Initial accumulator value
         setTotalSum(totalFinalRate);
@@ -117,13 +117,13 @@ const VoucherForm = () => {
                       lineno: 1,
                       ledgerName: ledgerName,
                       ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
-                      amount: voucher.FinalRate.toFixed(2),
+                      amount: (voucher.FinalRate * voucher.pax).toFixed(2),
                       drCr: "dr",
                     },
                     {
                       lineno: 2,
                       ledgerName: "Domestic Base Fare",
-                      amount: voucher.FinalRate.toFixed(2),
+                      amount: (voucher.FinalRate * voucher.pax).toFixed(2),
                       drCr: "cr",
                     },
                   ],
@@ -135,48 +135,49 @@ const VoucherForm = () => {
           toast.error(`Some selected vouchers are already pushed!`);
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
-        const response = await fetch("/api/cloud", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ data: dataForCloud }),
-        });
+        console.log('dataForCloud', dataForCloud)
+        // const response = await fetch("/api/cloud", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //   },
+        //   body: JSON.stringify({ data: dataForCloud }),
+        // });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Cloud server error:", response.status, errorText);
-          throw new Error(`Cloud server responded with status ${response.status}`);
-        } else {
-          if (i !== 0) {
-            toast.success(`${i} Vouchers Pushed!`);
-          }
-        }
+        // if (!response.ok) {
+        //   const errorText = await response.text();
+        //   console.error("Cloud server error:", response.status, errorText);
+        //   throw new Error(`Cloud server responded with status ${response.status}`);
+        // } else {
+        //   if (i !== 0) {
+        //     toast.success(`${i} Vouchers Pushed!`);
+        //   }
+        // }
       }
 
       // Update pushedVoucherRanges, lastUpdatedVoucher, etc.
-      setPushedVoucherRanges({
-        ...pushedVoucherRanges,
-        [rangeKey]: {
-          startDate: format(
-            new Date(firstSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          endDate: format(
-            new Date(lastSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          startVoucher: firstSelectedVoucher.InvoiceNo,
-          endVoucher: lastSelectedVoucher.InvoiceNo,
-        },
-      });
+      // setPushedVoucherRanges({
+      //   ...pushedVoucherRanges,
+      //   [rangeKey]: {
+      //     startDate: format(
+      //       new Date(firstSelectedVoucher.SaleEntryDate),
+      //       "dd/MM/yyyy"
+      //     ),
+      //     endDate: format(
+      //       new Date(lastSelectedVoucher.SaleEntryDate),
+      //       "dd/MM/yyyy"
+      //     ),
+      //     startVoucher: firstSelectedVoucher.InvoiceNo,
+      //     endVoucher: lastSelectedVoucher.InvoiceNo,
+      //   },
+      // });
 
-      setLastUpdatedVoucher(lastSelectedVoucher);
-      const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
-      if (lastVoucherDate) {
-        const formattedDate = new Date(lastVoucherDate).toISOString().split("T")[0];
-        setLastUpdatedVoucherDate(formattedDate);
-      }
+      // setLastUpdatedVoucher(lastSelectedVoucher);
+      // const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
+      // if (lastVoucherDate) {
+      //   const formattedDate = new Date(lastVoucherDate).toISOString().split("T")[0];
+      //   setLastUpdatedVoucherDate(formattedDate);
+      // }
       
       toast.success("Vouchers Submitted Successfully!");
     } catch (error) {

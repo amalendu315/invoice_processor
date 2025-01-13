@@ -54,11 +54,12 @@ export default function VoucherList({
   const [isMounted, setIsMounted] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCountry] = useState<string>("All");
   const [vouchersPerPage] = useState<number>(50);
 
-  // Single day filter
+  // Filters
   const [filterDate, setFilterDate] = useState<Date | null>(null);
+  const [filterCountry, setFilterCountry] = useState<string>("All");
+  const [filterPnr, setFilterPnr] = useState<string>("");
 
   const indexOfLastVoucher = currentPage * vouchersPerPage;
   const indexOfFirstVoucher = indexOfLastVoucher - vouchersPerPage;
@@ -66,15 +67,19 @@ export default function VoucherList({
   const filteredVouchers = useMemo(() => {
     return vouchers.filter((voucher) => {
       const matchesCountry =
-        selectedCountry === "All" ||
-        voucher.Country?.toLowerCase() === selectedCountry.toLowerCase();
+        filterCountry === "All" ||
+        voucher.Country?.toLowerCase() === filterCountry.toLowerCase();
 
       const matchesDate =
         !filterDate || isSameDay(parseISO(voucher.SaleEntryDate), filterDate);
 
-      return matchesCountry && matchesDate;
+      const matchesPnr =
+        filterPnr === "" ||
+        voucher.Pnr?.toLowerCase().includes(filterPnr.toLowerCase());
+
+      return matchesCountry && matchesDate && matchesPnr;
     });
-  }, [vouchers, selectedCountry, filterDate]);
+  }, [vouchers, filterCountry, filterDate, filterPnr]);
 
   const currentVouchers = useMemo(() => {
     return filteredVouchers.slice(indexOfFirstVoucher, indexOfLastVoucher);
@@ -105,10 +110,13 @@ export default function VoucherList({
 
   return (
     <div className="overflow-y-auto bg-slate-100 mt-3 pb-4 pt-2">
-      {/* Single Date Picker */}
+      {/* Filters */}
       <div className="flex gap-4 mb-4 items-center justify-center">
+        {/* Date Picker */}
         <div>
-          <label className="text-sm text-gray-700">Filter by Sale Entry Date: &nbsp;</label>
+          <label className="text-sm text-gray-700">
+            Filter by Sale Entry Date: &nbsp;
+          </label>
           <DatePicker
             selected={filterDate}
             onChange={(date: Date | null) => setFilterDate(date)}
@@ -117,8 +125,44 @@ export default function VoucherList({
             placeholderText="Select a date"
           />
         </div>
+
+        {/* Country Filter */}
+        <div>
+          <label className="text-sm text-gray-700">
+            Filter by Country: &nbsp;
+          </label>
+          <select
+            className="border rounded p-2"
+            value={filterCountry}
+            onChange={(e) => setFilterCountry(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="India">India</option>
+            <option value="Nepal">Nepal</option>
+            {/* {[...new Set(vouchers.map((voucher) => voucher.Country))]
+              .filter(Boolean)
+              .map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))} */}
+          </select>
+        </div>
+
+        {/* PNR Filter */}
+        <div>
+          <label className="text-sm text-gray-700">Filter by PNR: &nbsp;</label>
+          <input
+            type="text"
+            value={filterPnr}
+            onChange={(e) => setFilterPnr(e.target.value)}
+            className="border rounded p-2"
+            placeholder="Enter PNR"
+          />
+        </div>
       </div>
 
+      {/* Table */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -135,7 +179,7 @@ export default function VoucherList({
             <TableHead>Country</TableHead>
             <TableHead>PNR</TableHead>
             <TableHead>Account Name</TableHead>
-            <TableHead>Fin Prefix</TableHead>
+            <TableHead>Pax Qty</TableHead>
             <TableHead>Final Rate</TableHead>
             <TableHead>Sale Entry Date</TableHead>
           </TableRow>
@@ -165,12 +209,12 @@ export default function VoucherList({
               </TableCell>
               <TableCell>{voucher.Pnr}</TableCell>
               <TableCell>{voucher.AccountName}</TableCell>
-              <TableCell>{voucher.FinPrefix}</TableCell>
+              <TableCell>{voucher.pax}</TableCell>
               <TableCell>
                 {new Intl.NumberFormat("en-IN", {
                   style: "currency",
                   currency: "INR",
-                }).format(voucher.FinalRate)}
+                }).format(voucher.FinalRate * voucher.pax)}
               </TableCell>
               <TableCell>
                 {format(parseISO(voucher.SaleEntryDate), "MM/dd/yyyy HH:mm:ss")}
@@ -180,7 +224,7 @@ export default function VoucherList({
         </TableBody>
       </Table>
 
-      {/* Pagination controls */}
+      {/* Pagination Controls */}
       <div className="flex items-center justify-center mt-4 gap-2">
         <Button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -208,5 +252,5 @@ export default function VoucherList({
         </Button>
       </div>
     </div>
-  )
-  }
+  );
+}
