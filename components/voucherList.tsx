@@ -38,6 +38,7 @@ interface Voucher {
   CityName: string;
   Phone: string;
   Email: string;
+  Types: string;
 }
 
 interface VoucherListProps {
@@ -57,9 +58,11 @@ export default function VoucherList({
   const [vouchersPerPage] = useState<number>(50);
 
   // Filters
+  const [filterInvoice, setFilterInvoice] = useState<number | null>(null);
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [filterCountry, setFilterCountry] = useState<string>("All");
   const [filterPnr, setFilterPnr] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("All");
 
   const indexOfLastVoucher = currentPage * vouchersPerPage;
   const indexOfFirstVoucher = indexOfLastVoucher - vouchersPerPage;
@@ -70,6 +73,9 @@ export default function VoucherList({
         filterCountry === "All" ||
         voucher.Country?.toLowerCase() === filterCountry.toLowerCase();
 
+      const matchesInvoiceNumber =
+        filterInvoice === null || Number(voucher.InvoiceNo) === filterInvoice;
+
       const matchesDate =
         !filterDate || isSameDay(parseISO(voucher.SaleEntryDate), filterDate);
 
@@ -77,9 +83,26 @@ export default function VoucherList({
         filterPnr === "" ||
         voucher.Pnr?.toLowerCase().includes(filterPnr.toLowerCase());
 
-      return matchesCountry && matchesDate && matchesPnr;
+      const matchesType =
+        filterType === "All" ||
+        voucher.Types?.toLowerCase() === filterType.toLowerCase();
+
+      return (
+        matchesCountry &&
+        matchesInvoiceNumber &&
+        matchesDate &&
+        matchesPnr &&
+        matchesType
+      );
     });
-  }, [vouchers, filterCountry, filterDate, filterPnr]);
+  }, [
+    vouchers,
+    filterCountry,
+    filterInvoice,
+    filterDate,
+    filterPnr,
+    filterType,
+  ]);
 
   const currentVouchers = useMemo(() => {
     return filteredVouchers.slice(indexOfFirstVoucher, indexOfLastVoucher);
@@ -112,6 +135,21 @@ export default function VoucherList({
     <div className="overflow-y-auto bg-slate-100 mt-3 pb-4 pt-2">
       {/* Filters */}
       <div className="flex gap-4 mb-4 items-center justify-center">
+        <div>
+          <label className="text-sm text-gray-700">
+            Filter by Invoice No: &nbsp;
+          </label>
+          <input
+            type="number"
+            value={filterInvoice || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilterInvoice(value === "" ? null : Number(value));
+            }}
+            className="border rounded p-2"
+            placeholder="Enter Invoice Number"
+          />
+        </div>
         {/* Date Picker */}
         <div>
           <label className="text-sm text-gray-700">
@@ -139,13 +177,6 @@ export default function VoucherList({
             <option value="All">All</option>
             <option value="India">India</option>
             <option value="Nepal">Nepal</option>
-            {/* {[...new Set(vouchers.map((voucher) => voucher.Country))]
-              .filter(Boolean)
-              .map((country) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
-              ))} */}
           </select>
         </div>
 
@@ -176,12 +207,13 @@ export default function VoucherList({
             <TableHead>Invoice No</TableHead>
             <TableHead>Sale ID</TableHead>
             <TableHead>Invoice Entry Date</TableHead>
-            <TableHead>Country</TableHead>
+            <TableHead>Address</TableHead>
             <TableHead>PNR</TableHead>
             <TableHead>Account Name</TableHead>
             <TableHead>Pax Qty</TableHead>
-            <TableHead>Final Rate</TableHead>
+            <TableHead>Total Rate</TableHead>
             <TableHead>Sale Entry Date</TableHead>
+            <TableHead>Types</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -219,6 +251,7 @@ export default function VoucherList({
               <TableCell>
                 {format(parseISO(voucher.SaleEntryDate), "MM/dd/yyyy HH:mm:ss")}
               </TableCell>
+              <TableCell>{voucher.Types}</TableCell>
             </TableRow>
           ))}
         </TableBody>

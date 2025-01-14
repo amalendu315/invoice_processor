@@ -5,14 +5,20 @@ import React, { useContext } from "react";
 
 import VoucherContext from "@/context/VoucherContext";
 import AuthContext from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
+import ReturnVoucherContext from "@/context/ReturnVoucherContext";
 
 const SideHeader = () => {
+  const pathname = usePathname();
   const { isAuthenticated } = useContext(AuthContext);
   const {
     lastUpdatedVoucherDate,
     submissionDate,
     pushedVoucherRanges,
   } = useContext(VoucherContext);
+
+  const { lastUpdatedReturnVoucherDate, submissionDate:returnVoucherSubmissionDate, pushedReturnVoucherRanges } =
+    useContext(ReturnVoucherContext);
 
   function getRandomColor() {
     const letters = "0123456789ABCDEF";
@@ -29,52 +35,82 @@ const SideHeader = () => {
         <>
           <h2 className="text-xl font-bold mb-4">Voucher Date Details</h2>
           <div className="flex flex-col gap-8">
-            <p className="flex flex-col items-center justify-center">
-              Last Updated Voucher Date:{" "}
-              <span className="text-md font-bold text-green-500">
-                {lastUpdatedVoucherDate || "N/A"}
-              </span>
-            </p>
-            <p className="flex flex-col items-center justify-center">
-              Submission Date:{" "}
-              <span className="text-md font-bold text-green-500">
-                {submissionDate || "N/A"}
-              </span>
-            </p>
-            <div className="flex flex-col items-center justify-center">
-              <h3 className="text-center mb-3">
-                Tally Entry Dates with Voucher Ranges:
-              </h3>
-              <ul className="text-center">
-                {Object.entries(pushedVoucherRanges).map(
-                  ([key, range]) =>
-                    range?.startVoucher !== range?.endVoucher && (
-                      <li
-                        key={key}
-                        className="text-md font-bold"
-                        style={{ color: getRandomColor() }}
-                      >
-                        {range.startDate} - {range.endDate}:{" "}
-                        {range.startVoucher} - {range.endVoucher}
-                      </li>
-                    )
-                )}
-                {/* {Object.entries(pushedVoucherRanges).map(
-                  ([key, range]) =>
-                    range?.startVoucher === range?.endVoucher && (
-                      <li
-                        key={key}
-                        className={`text-md font-bold `}
-                        style={{ color: getRandomColor() }}
-                      >
-                        {format(new Date(range.startDate), "MM/dd/yyyy")} -{" "}
-                        {format(new Date(range.endDate), "MM/dd/yyyy")}:{" "}
-                        {range.startVoucher}
-                      </li>
-                    )
-                )} */}
-              </ul>
-            </div>
+            {pathname === "/" && (
+              <p className="flex flex-col items-center justify-center">
+                Last Updated Voucher Date:{" "}
+                <span className="text-md font-bold text-green-500">
+                  {lastUpdatedVoucherDate || "N/A"}
+                </span>
+              </p>
+            )}
+            {pathname === "/invoice-return" && (
+              <p className="flex flex-col items-center justify-center">
+                Last Updated Return Voucher Date:{" "}
+                <span className="text-md font-bold text-green-500">
+                  {lastUpdatedReturnVoucherDate || "N/A"}
+                </span>
+              </p>
+            )}
+            {pathname === "/" && (
+              <p className="flex flex-col items-center justify-center">
+                Submission Date:{" "}
+                <span className="text-md font-bold text-green-500">
+                  {submissionDate || "N/A"}
+                </span>
+              </p>
+            )}
+            {pathname === "/invoice-return" && (
+              <p className="flex flex-col items-center justify-center">
+                Invoice Return Submission Date:{" "}
+                <span className="text-md font-bold text-green-500">
+                  {returnVoucherSubmissionDate || "N/A"}
+                </span>
+              </p>
+            )}
+            {pathname === "/" && (
+              <div className="flex flex-col items-center justify-center">
+                <h3 className="text-center mb-3">
+                  Tally Entry Dates with Voucher Ranges:
+                </h3>
+                <ul className="text-center">
+                  {Object.entries(pushedVoucherRanges).map(
+                    ([key, range]) =>
+                      range?.startVoucher !== range?.endVoucher && (
+                        <li
+                          key={key}
+                          className="text-md font-bold"
+                          style={{ color: getRandomColor() }}
+                        >
+                          {range.startDate} - {range.endDate}:{" "}
+                          {range.startVoucher} - {range.endVoucher}
+                        </li>
+                      )
+                  )}
+                </ul>
+              </div>
+            )}
+            {pathname === "/invoice-return" && (
+              <div className="flex flex-col items-center justify-center">
+                <h3 className="text-center mb-3">
+                  Tally Entry Dates with Return Voucher Ranges:
+                </h3>
+                <ul className="text-center">
+                  {Object.entries(pushedReturnVoucherRanges).map(
+                    ([key, range]) =>
+                      range?.startVoucher !== range?.endVoucher && (
+                        <li
+                          key={key}
+                          className="text-md font-bold"
+                          style={{ color: getRandomColor() }}
+                        >
+                          {range.startDate} - {range.endDate}:{" "}
+                          {range.startVoucher} - {range.endVoucher}
+                        </li>
+                      )
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </>
       )}

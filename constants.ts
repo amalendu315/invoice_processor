@@ -21,6 +21,7 @@ export interface _Voucher {
   CityName: string;
   Phone: string;
   Email: string;
+  Types:string;
 }
 
 // export const _vouchers:_Voucher[] = [

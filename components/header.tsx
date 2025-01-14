@@ -1,20 +1,38 @@
 "use client";
 import SumContext from '@/context/SumContext';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import React from 'react'
 
 const Header = () => {
+  const pathname = usePathname();
   const {totalSum} = React.useContext(SumContext)
   return (
     <>
       <div className=" flex justify-center items-center bg-gradient-to-r from-gray-800 to-gray-900">
         <header className="text-white text-center text-3xl font-bold p-2 flex flex-col items-center justify-around w-full gap-4">
           {/* Added flex items-center */}
-          <h3>Voucher Processor</h3>
+          <h3>{pathname==="/" ? "Sales Vouchers" : "Sales Return Vouchers"}</h3>
           {/* Conditionally render myValue */}
           <p className="text-white text-sm font-bold pb-2">
             Enter date range and process entries
           </p>
         </header>
+        {pathname === "/" ? (
+          <Link
+            href={"/invoice-return"}
+            className="text-red-500 font-bold cursor-pointer"
+          >
+            Return Invoices Table
+          </Link>
+        ) : (
+          <Link
+            href={"/"}
+            className="text-green-500 font-bold cursor-pointer"
+          >
+            Back to Home
+          </Link>
+        )}
         {totalSum !== 0 && (
           <p className="text-white text-sm font-bold pb-2">
             Total Final Rate of All the Vouchers :-{" "}

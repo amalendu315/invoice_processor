@@ -1,24 +1,25 @@
+// InvoiceReturnForm.tsx
 "use client";
 import React, { useState } from "react";
-import { format } from "date-fns";
-import { Card, CardContent } from "./ui/card";
-import VoucherList from "./voucherList";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import toast from "react-hot-toast";
 import { _Voucher } from "@/constants";
-import VoucherContext from "@/context/VoucherContext";
 import SumContext from "@/context/SumContext";
 import * as XLSX from "xlsx"; // Import xlsx library
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import VoucherList from "@/components/voucherList";
+import { format } from "date-fns";
+import ReturnVoucherContext from "@/context/ReturnVoucherContext";
 
-const VoucherForm = () => {
+const InvoiceReturnForm = () => {
   const {
-    setLastUpdatedVoucherDate,
+    setLastUpdatedReturnVoucher,
     setSubmissionDate,
-    setLastUpdatedVoucher,
-    setPushedVoucherRanges,
-    pushedVoucherRanges,
-  } = React.useContext(VoucherContext);
+    setLastUpdatedReturnVoucherDate,
+    setPushedReturnVoucherRanges,
+    pushedReturnVoucherRanges,
+  } = React.useContext(ReturnVoucherContext);
 
   const { setTotalSum } = React.useContext(SumContext);
 
@@ -39,11 +40,11 @@ const VoucherForm = () => {
       if (!response?.ok) {
         toast.error("No Data Found");
       } else {
-       const sortedVouchers = [...data.data]
-         .filter((voucher) => voucher.Types === "Invoice")
-         .sort((a, b) => a.InvoiceNo - b.InvoiceNo);
-
-       setVouchers(sortedVouchers);
+        const sortedVouchers = [...data.data]
+          .filter((voucher) => voucher.Types === "Invoice Return")
+          .sort((a, b) => a.InvoiceNo - b.InvoiceNo);
+        console.log('sortedVouchers', sortedVouchers)
+        setVouchers(sortedVouchers);
         const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
           const voucherFinalRate =
             typeof voucher.FinalRate === "number"
@@ -54,7 +55,7 @@ const VoucherForm = () => {
         setTotalSum(totalFinalRate);
         const length = sortedVouchers?.length;
         toast.success(
-          `Total ${length} vouchers fetched for the selected range!`
+          `Total ${length} "Invoice Return" vouchers fetched for the selected range!`
         );
       }
     } catch (error) {
@@ -63,31 +64,6 @@ const VoucherForm = () => {
     } finally {
       setIsSalesLoading(false);
     }
-  };
-
-  const handleExportToExcel = () => {
-    if (vouchers.length === 0) {
-      toast.error("No data available to export!");
-      return;
-    }
-
-    const formattedData = vouchers.map((voucher) => ({
-      InvoiceNo: voucher.InvoiceNo,
-      SaleEntryDate: voucher.SaleEntryDate,
-      Pnr: voucher.Pnr,
-      Pax: voucher.pax,
-      AccountName: voucher.AccountName,
-      Country: voucher.Country,
-      FinalRate: voucher.FinalRate,
-      TotalAmount: voucher.FinalRate * voucher.pax,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(formattedData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Vouchers");
-    XLSX.writeFile(workbook, "Vouchers.xlsx");
-
-    toast.success("Excel file has been downloaded successfully!");
   };
 
   const handleSubmitToCloud = async () => {
@@ -116,24 +92,25 @@ const VoucherForm = () => {
             const voucher = vouchers[index];
 
             if (
-              pushedVoucherRanges[rangeKey] &&
+              pushedReturnVoucherRanges[rangeKey] &&
               (voucher.InvoiceNo ===
-                pushedVoucherRanges[rangeKey].startVoucher ||
-                voucher.InvoiceNo === pushedVoucherRanges[rangeKey].endVoucher)
+                pushedReturnVoucherRanges[rangeKey].startVoucher ||
+                voucher.InvoiceNo === pushedReturnVoucherRanges[rangeKey].endVoucher)
             ) {
               toast.error(`Voucher ${voucher.InvoiceNo} already pushed!`);
               return undefined;
             }
 
             let ledgerName = voucher.AccountName;
+            let ledgerPrefix = voucher.FinPrefix === "ASCN/24-25/" ? "SR/24-25/" : ""
             if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
               ledgerName = "Air IQ Nepal";
             }
 
             return {
               branchName: "AirIQ",
-              vouchertype: "Sales",
-              voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
+              vouchertype: "Credit Note",
+              voucherno: `${ledgerPrefix}${voucher.InvoiceNo}`,
               voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
                 /-/g,
                 "/"
@@ -182,8 +159,8 @@ const VoucherForm = () => {
         }
       }
 
-      setPushedVoucherRanges({
-        ...pushedVoucherRanges,
+      setPushedReturnVoucherRanges({
+        ...pushedReturnVoucherRanges,
         [rangeKey]: {
           startDate: format(
             new Date(firstSelectedVoucher.SaleEntryDate),
@@ -198,13 +175,13 @@ const VoucherForm = () => {
         },
       });
 
-      setLastUpdatedVoucher(lastSelectedVoucher);
+      setLastUpdatedReturnVoucher(lastSelectedVoucher);
       const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
       if (lastVoucherDate) {
         const formattedDate = new Date(lastVoucherDate)
           .toISOString()
           .split("T")[0];
-        setLastUpdatedVoucherDate(formattedDate);
+        setLastUpdatedReturnVoucherDate(formattedDate);
       }
 
       toast.success("Vouchers Submitted Successfully!");
@@ -214,6 +191,35 @@ const VoucherForm = () => {
     } finally {
       setIsCloudLoading(false);
     }
+  };
+
+  const handleExportToExcel = () => {
+    if (vouchers.length === 0) {
+      toast.error("No data available to export!");
+      return;
+    }
+
+    const formattedData = vouchers.map((voucher) => ({
+      InvoiceNo: voucher.InvoiceNo,
+      SaleEntryDate: voucher.SaleEntryDate,
+      Pnr: voucher.Pnr,
+      Pax: voucher.pax,
+      AccountName: voucher.AccountName,
+      Country: voucher.Country,
+      FinalRate: voucher.FinalRate,
+      TotalAmount: voucher.FinalRate * voucher.pax,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Invoice Return Vouchers"
+    );
+    XLSX.writeFile(workbook, "Invoice_Return_Vouchers.xlsx");
+
+    toast.success("Excel file has been downloaded successfully!");
   };
 
   return (
@@ -248,7 +254,7 @@ const VoucherForm = () => {
               onClick={handleFetchSalesEntries}
               disabled={isSalesLoading}
             >
-              Fetch Sales Entries
+              Fetch Invoice Return Entries
             </Button>
             <Button
               className="mt-5"
@@ -274,4 +280,4 @@ const VoucherForm = () => {
   );
 };
 
-export default VoucherForm;
+export default InvoiceReturnForm;
