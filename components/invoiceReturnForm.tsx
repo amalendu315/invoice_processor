@@ -43,7 +43,6 @@ const InvoiceReturnForm = () => {
         const sortedVouchers = [...data.data]
           .filter((voucher) => voucher.Types === "Invoice Return")
           .sort((a, b) => a.InvoiceNo - b.InvoiceNo);
-        console.log('sortedVouchers', sortedVouchers)
         setVouchers(sortedVouchers);
         const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
           const voucherFinalRate =
@@ -102,7 +101,7 @@ const InvoiceReturnForm = () => {
             }
 
             let ledgerName = voucher.AccountName;
-            let ledgerPrefix = voucher.FinPrefix === "ASCN/24-25/" ? "SR/24-25/" : ""
+            const ledgerPrefix = voucher.FinPrefix === "ASCN/24-25/" ? "SR/24-25/" : ""
             if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
               ledgerName = "Air IQ Nepal";
             }

@@ -62,7 +62,7 @@ export default function VoucherList({
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [filterCountry, setFilterCountry] = useState<string>("All");
   const [filterPnr, setFilterPnr] = useState<string>("");
-  const [filterType, setFilterType] = useState<string>("All");
+  // const [filterType, setFilterType] = useState<string>("All");
 
   const indexOfLastVoucher = currentPage * vouchersPerPage;
   const indexOfFirstVoucher = indexOfLastVoucher - vouchersPerPage;
@@ -83,16 +83,15 @@ export default function VoucherList({
         filterPnr === "" ||
         voucher.Pnr?.toLowerCase().includes(filterPnr.toLowerCase());
 
-      const matchesType =
-        filterType === "All" ||
-        voucher.Types?.toLowerCase() === filterType.toLowerCase();
+      // const matchesType =
+      //   filterType === "All" ||
+      //   voucher.Types?.toLowerCase() === filterType.toLowerCase();
 
       return (
         matchesCountry &&
         matchesInvoiceNumber &&
         matchesDate &&
-        matchesPnr &&
-        matchesType
+        matchesPnr
       );
     });
   }, [
@@ -101,7 +100,6 @@ export default function VoucherList({
     filterInvoice,
     filterDate,
     filterPnr,
-    filterType,
   ]);
 
   const currentVouchers = useMemo(() => {
