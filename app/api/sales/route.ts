@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     };
 
     const response = await axios.request(config);
-    if(response?.data?.code === 404){
+    if(response?.data?.code === '404'){
       return NextResponse.json(
         { error: "No Data Found" },
         { status: 404 }
