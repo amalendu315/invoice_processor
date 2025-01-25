@@ -137,7 +137,7 @@ const InvoiceReturnForm = () => {
           toast.error(`Some selected vouchers are already pushed!`);
           throw new Error(`DataForCloud contains undefined vouchers!`);
         }
-        const response = await fetch("/api/cloud", {
+        const response = await fetch("/api/return-cloud", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -157,7 +157,6 @@ const InvoiceReturnForm = () => {
           }
         }
       }
-
       setPushedReturnVoucherRanges({
         ...pushedReturnVoucherRanges,
         [rangeKey]: {
