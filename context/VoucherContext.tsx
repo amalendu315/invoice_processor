@@ -4,35 +4,31 @@ import { _Voucher } from "@/constants";
 import { createContext, useState, useEffect } from "react";
 
 // Define a type for the pushed voucher ranges
-type PushedVoucherRanges = {
-  [key: string]: {
-    // The key could be a combination of startDate and endDate, or a unique identifier
-    startDate: string;
-    endDate: string;
-    startVoucher: number;
-    endVoucher: number;
-  };
-};
+interface PushedVoucherRange {
+  startDate: string;
+  endDate: string;
+  startVoucher: number;
+  endVoucher: number;
+}
+
+// Context State Types
+interface PushedVoucherRanges {
+  [key: string]: PushedVoucherRange;
+}
+
+// Props for setState functions
+type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
 
 const VoucherContext = createContext<{
   lastUpdatedVoucher: _Voucher | null;
-  setLastUpdatedVoucher: (voucher: _Voucher) => void;
+  setLastUpdatedVoucher: SetState<_Voucher | null>;
   lastUpdatedVoucherDate: string;
-  setLastUpdatedVoucherDate: (date: string) => void;
+  setLastUpdatedVoucherDate: SetState<string>;
   submissionDate: string;
-  setSubmissionDate: (date: string) => void;
+  setSubmissionDate: SetState<string>;
   pushedVoucherRanges: PushedVoucherRanges;
-  setPushedVoucherRanges: (ranges: PushedVoucherRanges) => void;
-}>({
-  lastUpdatedVoucher: null,
-  setLastUpdatedVoucher: () => {},
-  lastUpdatedVoucherDate: "",
-  setLastUpdatedVoucherDate: () => {},
-  submissionDate: "",
-  setSubmissionDate: () => {},
-  pushedVoucherRanges: {},
-  setPushedVoucherRanges: () => {},
-});
+  setPushedVoucherRanges: SetState<PushedVoucherRanges>;
+} | null>(null); // ✅ Fixed: Default to null to avoid undefined context issues
 
 export const VoucherProvider = ({
   children,
@@ -42,54 +38,101 @@ export const VoucherProvider = ({
   const [lastUpdatedVoucher, setLastUpdatedVoucher] = useState<_Voucher | null>(
     null
   );
-  const [lastUpdatedVoucherDate, setLastUpdatedVoucherDate] = useState("");
-  const [submissionDate, setSubmissionDate] = useState("");
-  const [pushedVoucherRanges, setPushedVoucherRanges] = useState<
-    PushedVoucherRanges
-  >({});
+  const [lastUpdatedVoucherDate, setLastUpdatedVoucherDate] =
+    useState<string>("");
+  const [submissionDate, setSubmissionDate] = useState<string>("");
+  const [pushedVoucherRanges, setPushedVoucherRanges] =
+    useState<PushedVoucherRanges>({});
 
   useEffect(() => {
     const storedVoucher = localStorage.getItem("lastUpdatedVoucher");
     if (storedVoucher) {
-      setLastUpdatedVoucher(JSON.parse(storedVoucher));
+      try {
+        setLastUpdatedVoucher(JSON.parse(storedVoucher));
+      } catch (error) {
+        console.error("Error parsing lastUpdatedVoucher:", error);
+        localStorage.removeItem("lastUpdatedVoucher"); // Clear invalid storage
+      }
     }
+
     const storedDate = localStorage.getItem("lastUpdatedVoucherDate");
-    if (storedDate) {
-      setLastUpdatedVoucherDate(storedDate);
-    }
+    if (storedDate) setLastUpdatedVoucherDate(storedDate);
+
     const storedSubmissionDate = localStorage.getItem("submissionDate");
-    if (storedSubmissionDate) {
-      setSubmissionDate(storedSubmissionDate);
-    }
+    if (storedSubmissionDate) setSubmissionDate(storedSubmissionDate);
+
     const storedPushedRanges = localStorage.getItem("pushedVoucherRanges");
     if (storedPushedRanges) {
-      setPushedVoucherRanges(JSON.parse(storedPushedRanges));
+      try {
+        const parsedRanges = JSON.parse(storedPushedRanges);
+        if (parsedRanges && typeof parsedRanges === "object") {
+          setPushedVoucherRanges(parsedRanges);
+        } else {
+          console.error("Invalid pushedVoucherRanges format:", parsedRanges);
+          localStorage.removeItem("pushedVoucherRanges");
+        }
+      } catch (error) {
+        console.error("Error parsing pushedVoucherRanges:", error);
+        localStorage.removeItem("pushedVoucherRanges"); // Clear invalid data
+      }
     }
   }, []);
+  // ✅ Fix: Wrap the state setters properly
+  const updateLastUpdatedVoucher = (
+    value: _Voucher | null | ((prev: _Voucher | null) => _Voucher | null)
+  ) => {
+    setLastUpdatedVoucher((prev) => {
+      const newValue = typeof value === "function" ? value(prev) : value;
+      if (newValue !== null) {
+        localStorage.setItem("lastUpdatedVoucher", JSON.stringify(newValue));
+      } else {
+        localStorage.removeItem("lastUpdatedVoucher");
+      }
+      return newValue;
+    });
+  };
+
+  const updateLastUpdatedVoucherDate = (
+    value: string | ((prev: string) => string)
+  ) => {
+    setLastUpdatedVoucherDate((prev) => {
+      const newValue = typeof value === "function" ? value(prev) : value;
+      localStorage.setItem("lastUpdatedVoucherDate", newValue);
+      return newValue;
+    });
+  };
+
+  const updateSubmissionDate = (value: string | ((prev: string) => string)) => {
+    setSubmissionDate((prev) => {
+      const newValue = typeof value === "function" ? value(prev) : value;
+      localStorage.setItem("submissionDate", newValue);
+      return newValue;
+    });
+  };
+
+  const updatePushedVoucherRanges = (
+    value:
+      | PushedVoucherRanges
+      | ((prev: PushedVoucherRanges) => PushedVoucherRanges)
+  ) => {
+    setPushedVoucherRanges((prev) => {
+      const newValue = typeof value === "function" ? value(prev) : value;
+      localStorage.setItem("pushedVoucherRanges", JSON.stringify(newValue));
+      return newValue;
+    });
+  };
 
   return (
     <VoucherContext.Provider
       value={{
         lastUpdatedVoucher,
-        setLastUpdatedVoucher: (voucher: _Voucher) => {
-          setLastUpdatedVoucher(voucher);
-          localStorage.setItem("lastUpdatedVoucher", JSON.stringify(voucher));
-        },
+        setLastUpdatedVoucher: updateLastUpdatedVoucher, // ✅ Wrapped function
         lastUpdatedVoucherDate,
-        setLastUpdatedVoucherDate: (date: string) => {
-          setLastUpdatedVoucherDate(date);
-          localStorage.setItem("lastUpdatedVoucherDate", date);
-        },
+        setLastUpdatedVoucherDate: updateLastUpdatedVoucherDate, // ✅ Wrapped function
         submissionDate,
-        setSubmissionDate: (date: string) => {
-          setSubmissionDate(date);
-          localStorage.setItem("submissionDate", date);
-        },
+        setSubmissionDate: updateSubmissionDate, // ✅ Wrapped function
         pushedVoucherRanges,
-        setPushedVoucherRanges: (ranges: PushedVoucherRanges) => {
-          setPushedVoucherRanges(ranges);
-          localStorage.setItem("pushedVoucherRanges", JSON.stringify(ranges));
-        },
+        setPushedVoucherRanges: updatePushedVoucherRanges, // ✅ Wrapped function
       }}
     >
       {children}

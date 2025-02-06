@@ -11,14 +11,51 @@ import VoucherContext from "@/context/VoucherContext";
 import SumContext from "@/context/SumContext";
 import * as XLSX from "xlsx"; // Import xlsx library
 
+interface VoucherData {
+  branchName: string;
+  vouchertype: string;
+  voucherno: string;
+  voucherdate: string;
+  narration: string;
+  ledgerAllocation: {
+    lineno: number;
+    ledgerName: string;
+    ledgerAddress?: string;
+    amount: string;
+    drCr: "dr" | "cr";
+  }[];
+}
+
+interface PushedVoucherRange {
+  startDate: string;
+  endDate: string;
+  startVoucher: number;
+  endVoucher: number;
+}
+
+// Context State Types
+interface PushedVoucherRanges {
+  [key: string]: PushedVoucherRange
+}
+
+// Props for setState functions
+type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
+
 const VoucherForm = () => {
+  const voucherContext = React.useContext(VoucherContext);
+  if (!voucherContext) {
+    throw new Error("VoucherContext must be used within a VoucherProvider");
+  }
+
+  // Now safely destructure
   const {
     setLastUpdatedVoucherDate,
     setSubmissionDate,
     setLastUpdatedVoucher,
     setPushedVoucherRanges,
     pushedVoucherRanges,
-  } = React.useContext(VoucherContext);
+  } = voucherContext;
+
 
   const { setTotalSum } = React.useContext(SumContext);
 
@@ -90,8 +127,150 @@ const VoucherForm = () => {
     toast.success("Excel file has been downloaded successfully!");
   };
 
+  const _prepareVoucherDataForCloud = (
+    entriesBatch: number[],
+    vouchers: _Voucher[],
+    pushedVoucherRanges: PushedVoucherRanges,
+    rangeKey: string
+  ): VoucherData[] => {
+    return entriesBatch
+      .map((index) => {
+        const voucher = vouchers[index];
+
+        if (!voucher) return null;
+
+        if (
+          pushedVoucherRanges[rangeKey] &&
+          (voucher.InvoiceNo === pushedVoucherRanges[rangeKey].startVoucher ||
+            voucher.InvoiceNo === pushedVoucherRanges[rangeKey].endVoucher)
+        ) {
+          toast.error(`Voucher ${voucher.InvoiceNo} already pushed!`);
+          return null;
+        }
+
+        let ledgerName = voucher.AccountName;
+        if (voucher.Country?.toLowerCase() === "nepal") {
+          ledgerName = "Air IQ Nepal";
+          return {
+            branchName: "AirIQ",
+            vouchertype: "Sales",
+            voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
+            voucherdate: voucher.SaleEntryDate.split("T")[0].replace(/-/g, "/"),
+            narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
+            ledgerAllocation: [
+              {
+                lineno: 1,
+                ledgerName: ledgerName,
+                ledgerAddress: `${voucher.Add1 ?? ""}, ${voucher.Add2 ?? ""}, ${
+                  voucher.CityName ?? ""
+                } - ${voucher.Pin ?? ""}`,
+                amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                drCr: "dr",
+              },
+              {
+                lineno: 2,
+                ledgerName: "Domestic Base Fare",
+                amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                drCr: "cr",
+              },
+            ],
+          };
+        } else {
+          return {
+            branchName: "AirIQ",
+            vouchertype: "Sales",
+            voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
+            voucherdate: voucher.SaleEntryDate.split("T")[0].replace(/-/g, "/"),
+            narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
+            ledgerAllocation: [
+              {
+                lineno: 1,
+                ledgerName: ledgerName,
+                ledgerAddress: `${voucher.Add1 ?? ""}, ${voucher.Add2 ?? ""}, ${
+                  voucher.CityName ?? ""
+                } - ${voucher.Pin ?? ""}`,
+                amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                drCr: "dr",
+              },
+              {
+                lineno: 2,
+                ledgerName: "Domestic Base Fare",
+                amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                drCr: "cr",
+              },
+            ],
+          };
+        }
+      })
+      .filter((voucher): voucher is VoucherData => voucher !== null);
+  };
+
+  const _pushDataToCloud = async (
+    dataForCloud: VoucherData[],
+    retries: number = 3
+  ): Promise<boolean> => {
+    let attempt = 0;
+    while (attempt < retries) {
+      try {
+        const response = await fetch("/api/cloud", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: dataForCloud }),
+        });
+
+        if (!response.ok) {
+          console.error(
+            `Cloud API error (attempt ${attempt + 1}):`,
+            response.status
+          );
+          throw new Error(`Cloud server error ${response.status}`);
+        }
+        return true;
+      } catch (error) {
+        attempt++;
+        console.warn(`Retrying batch (${attempt}/${retries})...`, error);
+        await new Promise((res) => setTimeout(res, 2000 * attempt)); // Exponential backoff
+      }
+    }
+    return false;
+  };
+
+   const _updateLastPushedVoucher = (
+    selectedEntries: number[],
+    vouchers: _Voucher[],
+    _setPushedVoucherRanges: SetState<PushedVoucherRanges>,
+    setLastUpdatedVoucher: SetState<_Voucher | null>,
+    setLastUpdatedVoucherDate: SetState<string>,
+    dateRange: { start: string; end: string }
+  ) => {
+    if (selectedEntries.length === 0) return;
+
+    const firstVoucher = vouchers[selectedEntries[0]];
+    const lastVoucher = vouchers[selectedEntries[selectedEntries.length - 1]];
+
+    if (!firstVoucher || !lastVoucher) return;
+
+    // Ensure state update uses the correct function signature
+    _setPushedVoucherRanges((prev: PushedVoucherRanges) => ({
+      ...prev,
+      [`${dateRange.start}-${dateRange.end}`]: {
+        startDate: format(new Date(firstVoucher.SaleEntryDate), "dd/MM/yyyy"),
+        endDate: format(new Date(lastVoucher.SaleEntryDate), "dd/MM/yyyy"),
+        startVoucher: firstVoucher.InvoiceNo,
+        endVoucher: lastVoucher.InvoiceNo,
+      },
+    }));
+
+    setLastUpdatedVoucher(lastVoucher);
+
+    if (lastVoucher.InvoiceEntryDate) {
+      setLastUpdatedVoucherDate(
+        new Date(lastVoucher.InvoiceEntryDate).toISOString().split("T")[0]
+      );
+    }
+  };
   const handleSubmitToCloud = async () => {
-    if (selectedEntries.length <= 0) {
+    if (selectedEntries.length === 0) {
       toast.error(`Please select at least one voucher to push!`);
       return;
     }
@@ -102,110 +281,37 @@ const VoucherForm = () => {
       const currentDate = new Date().toISOString().split("T")[0];
       setSubmissionDate(currentDate);
 
-      const firstSelectedVoucher = vouchers[selectedEntries[0]];
-      const lastSelectedVoucherIndex =
-        selectedEntries[selectedEntries.length - 1];
-      const lastSelectedVoucher = vouchers[lastSelectedVoucherIndex];
-
       const rangeKey = `${dateRange.start}-${dateRange.end}`;
 
+      // Process vouchers in batches
       for (let i = 0; i < selectedEntries.length; i += vouchersPerRequest) {
-        const dataForCloud = selectedEntries
-          .slice(i, i + vouchersPerRequest)
-          .map((index) => {
-            const voucher = vouchers[index];
+        const dataForCloud = _prepareVoucherDataForCloud(
+          selectedEntries.slice(i, i + vouchersPerRequest),
+          vouchers,
+          pushedVoucherRanges,
+          rangeKey
+        );
 
-            if (
-              pushedVoucherRanges[rangeKey] &&
-              (voucher.InvoiceNo ===
-                pushedVoucherRanges[rangeKey].startVoucher ||
-                voucher.InvoiceNo === pushedVoucherRanges[rangeKey].endVoucher)
-            ) {
-              toast.error(`Voucher ${voucher.InvoiceNo} already pushed!`);
-              return undefined;
-            }
+        if (dataForCloud.length === 0) continue;
 
-            let ledgerName = voucher.AccountName;
-            if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
-              ledgerName = "Air IQ Nepal";
-            }
-
-            return {
-              branchName: "AirIQ",
-              vouchertype: "Sales",
-              voucherno: `${voucher.FinPrefix}${voucher.InvoiceNo}`,
-              voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
-                /-/g,
-                "/"
-              ),
-              narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
-              ledgerAllocation: [
-                {
-                  lineno: 1,
-                  ledgerName: ledgerName,
-                  ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
-                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
-                  drCr: "dr",
-                },
-                {
-                  lineno: 2,
-                  ledgerName: "Domestic Base Fare",
-                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
-                  drCr: "cr",
-                },
-              ],
-            };
-          });
-
-        if (dataForCloud.some((voucher) => voucher === undefined)) {
-          toast.error(`Some selected vouchers are already pushed!`);
-          throw new Error(`DataForCloud contains undefined vouchers!`);
+        const success = await _pushDataToCloud(dataForCloud);
+        if (!success) {
+          toast.error(`Error submitting batch ${i + 1} to cloud`);
+          break;
         }
-        const response = await fetch("/api/cloud", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ data: dataForCloud }),
-        });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Cloud server error:", response.status, errorText);
-          throw new Error(
-            `Cloud server responded with status ${response.status}`
-          );
-        } else {
-          if (i !== 0) {
-            toast.success(`${i} Vouchers Pushed!`);
-          }
-        }
+        toast.success(`Batch ${i / vouchersPerRequest + 1} Vouchers Pushed!`);
       }
 
-      setPushedVoucherRanges({
-        ...pushedVoucherRanges,
-        [rangeKey]: {
-          startDate: format(
-            new Date(firstSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          endDate: format(
-            new Date(lastSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          startVoucher: firstSelectedVoucher.InvoiceNo,
-          endVoucher: lastSelectedVoucher.InvoiceNo,
-        },
-      });
-
-      setLastUpdatedVoucher(lastSelectedVoucher);
-      const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
-      if (lastVoucherDate) {
-        const formattedDate = new Date(lastVoucherDate)
-          .toISOString()
-          .split("T")[0];
-        setLastUpdatedVoucherDate(formattedDate);
-      }
+      // Update last pushed voucher details
+      _updateLastPushedVoucher(
+        selectedEntries,
+        vouchers,
+        setPushedVoucherRanges,
+        setLastUpdatedVoucher,
+        setLastUpdatedVoucherDate,
+        dateRange
+      );
 
       toast.success("Vouchers Submitted Successfully!");
     } catch (error) {

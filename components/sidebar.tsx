@@ -11,11 +11,12 @@ import ReturnVoucherContext from "@/context/ReturnVoucherContext";
 const SideHeader = () => {
   const pathname = usePathname();
   const { isAuthenticated } = useContext(AuthContext);
-  const {
-    lastUpdatedVoucherDate,
-    submissionDate,
-    pushedVoucherRanges,
-  } = useContext(VoucherContext);
+  const voucherContext = React.useContext(VoucherContext);
+  if (!voucherContext) {
+    throw new Error("VoucherContext must be used within a VoucherProvider");
+  }
+  const { lastUpdatedVoucherDate, submissionDate, pushedVoucherRanges } =
+    voucherContext;
 
   const { lastUpdatedReturnVoucherDate, submissionDate:returnVoucherSubmissionDate, pushedReturnVoucherRanges } =
     useContext(ReturnVoucherContext);
