@@ -39,6 +39,11 @@ interface Voucher {
   Phone: string;
   Email: string;
   Types: string;
+  MainCityID: 526;
+  CountryID: number;
+  CountryMain: string;
+  CityEntryMainID: number;
+  State: string;
 }
 
 interface VoucherListProps {
@@ -67,59 +72,108 @@ export default function VoucherList({
   const indexOfLastVoucher = currentPage * vouchersPerPage;
   const indexOfFirstVoucher = indexOfLastVoucher - vouchersPerPage;
 
-  const filteredVouchers = useMemo(() => {
-    return vouchers.filter((voucher) => {
-      const matchesCountry =
-        filterCountry === "All" ||
-        voucher.Country?.toLowerCase() === filterCountry.toLowerCase();
+const filteredVouchers = useMemo(() => {
+  return vouchers.filter((voucher) => {
+    const countryLower = voucher.Country?.toLowerCase() || "";
+    const stateLower = voucher.State?.toLowerCase() || "";
+    const cityLower = voucher.CityName?.toLowerCase() || "";
+    const countryMainLower = voucher.CountryMain?.toLowerCase() || "";
+    const countryID = voucher.CountryID;
+    const countryMainID = voucher.CityEntryMainID; // Assuming this maps correctly
 
-      const matchesInvoiceNumber =
-        filterInvoice === null || Number(voucher.InvoiceNo) === filterInvoice;
+    // Ensure Nepal consistency
+    if (countryID === 4) {
+      voucher.Country = "Nepal"; // Enforce consistency
+    }
 
-      const matchesDate =
-        !filterDate || isSameDay(parseISO(voucher.SaleEntryDate), filterDate);
+    // Handle inconsistent India data
+    if (!voucher.Country && countryMainLower === "india") {
+      voucher.Country = "India"; // Assume it's India if CountryMain says so
+    }
 
-      const matchesPnr =
-        filterPnr === "" ||
-        voucher.Pnr?.toLowerCase().includes(filterPnr.toLowerCase());
+    const isIndia =
+      countryLower === "india" ||
+      countryMainLower === "india" ||
+      countryID === 1 ||
+      countryMainID === 1 ||
+      (countryID === null && countryMainLower === "india") ||
+      (voucher.Country === null &&
+        voucher.CountryMain === null &&
+        voucher.CountryID === null);
 
-      // const matchesType =
-      //   filterType === "All" ||
-      //   voucher.Types?.toLowerCase() === filterType.toLowerCase();
+    const isNepal =
+      countryLower === "nepal" ||
+      countryMainLower === "nepal" ||
+      countryID === 4 ||
+      stateLower.includes("province");
 
-      return (
-        matchesCountry &&
-        matchesInvoiceNumber &&
-        matchesDate &&
-        matchesPnr
-      );
-    });
-  }, [
-    vouchers,
-    filterCountry,
-    filterInvoice,
-    filterDate,
-    filterPnr,
-  ]);
+    // "Other" condition: If all relevant fields are null or empty
+    const isOther =
+      (!countryLower &&
+        !countryID &&
+        !countryMainLower &&
+        !stateLower ||
+        !cityLower) ||
+      (voucher.Country === null &&
+        voucher.CountryID === null &&
+        voucher.CountryMain === null &&
+        voucher.CityEntryMainID === null &&
+        voucher.State === null &&
+        voucher.CityName === null);
+
+
+    const matchesCountry =
+      filterCountry === "All" ||
+      (filterCountry === "India" && isIndia) ||
+      (filterCountry === "Nepal" && isNepal) ||
+      (filterCountry === "Other" && isOther) ;
+
+    const matchesInvoiceNumber =
+      filterInvoice === null || Number(voucher.InvoiceNo) === filterInvoice;
+
+    const matchesDate =
+      !filterDate || isSameDay(parseISO(voucher.SaleEntryDate), filterDate);
+
+    const matchesPnr =
+      filterPnr === "" ||
+      voucher.Pnr?.toLowerCase().includes(filterPnr.toLowerCase());
+
+    return matchesCountry && matchesInvoiceNumber && matchesDate && matchesPnr;
+  });
+}, [vouchers, filterCountry, filterInvoice, filterDate, filterPnr]);
+
 
   const currentVouchers = useMemo(() => {
     return filteredVouchers.slice(indexOfFirstVoucher, indexOfLastVoucher);
   }, [filteredVouchers, indexOfFirstVoucher, indexOfLastVoucher]);
 
-  const handleCheckboxChange = (index: number) => {
+  const handleCheckboxChange = (invoiceID: number) => {
     const updatedSelection = [...selectedEntries];
-    if (updatedSelection.includes(index)) {
-      updatedSelection.splice(updatedSelection.indexOf(index), 1);
+
+    if (updatedSelection.includes(invoiceID)) {
+      updatedSelection.splice(updatedSelection.indexOf(invoiceID), 1);
     } else {
-      updatedSelection.push(index);
+      updatedSelection.push(invoiceID);
     }
+
     onSelect(updatedSelection);
+    console.log('updatedSelection', updatedSelection)
   };
 
   const handleSelectAllChange = () => {
     setSelectAll(!selectAll);
-    onSelect(selectAll ? [] : vouchers.map((_, index) => index));
+
+    if (!selectAll) {
+      // Select only the currently filtered vouchers
+      onSelect(filteredVouchers.map((voucher) => voucher.InvoiceNo));
+      
+    } else {
+      // Deselect all
+      onSelect([]);
+    }
   };
+
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -215,13 +269,17 @@ export default function VoucherList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {currentVouchers.map((voucher, index) => (
+          {currentVouchers.map((voucher) => (
             <TableRow key={voucher.InvoiceID}>
               <TableCell>
-                <Checkbox
-                  checked={selectAll || selectedEntries.includes(index)}
-                  onCheckedChange={() => handleCheckboxChange(index)}
-                />
+                <TableCell>
+                  <Checkbox
+                    checked={selectedEntries.includes(voucher.InvoiceNo)}
+                    onCheckedChange={() =>
+                      handleCheckboxChange(voucher.InvoiceNo)
+                    }
+                  />
+                </TableCell>
               </TableCell>
               <TableCell>{voucher.InvoiceID}</TableCell>
               <TableCell>{voucher.InvoiceNo}</TableCell>

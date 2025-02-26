@@ -4,7 +4,7 @@ import { _Voucher } from "@/constants";
 import { createContext, useState, useEffect } from "react";
 
 // Define a type for the pushed voucher ranges
-type PushedReturnVoucherRanges = {
+export type PushedReturnVoucherRanges = {
   [key: string]: {
     // The key could be a combination of startDate and endDate, or a unique identifier
     startDate: string;
@@ -22,7 +22,9 @@ const ReturnVoucherContext = createContext<{
   submissionDate: string;
   setSubmissionDate: (date: string) => void;
   pushedReturnVoucherRanges: PushedReturnVoucherRanges;
-  setPushedReturnVoucherRanges: (ranges: PushedReturnVoucherRanges) => void;
+  setPushedReturnVoucherRanges: (
+    updater: (prev: PushedReturnVoucherRanges) => PushedReturnVoucherRanges
+  ) => void;
 }>({
   lastUpdatedReturnVoucher: null,
   setLastUpdatedReturnVoucher: () => {},
@@ -33,6 +35,7 @@ const ReturnVoucherContext = createContext<{
   pushedReturnVoucherRanges: {},
   setPushedReturnVoucherRanges: () => {},
 });
+
 
 export const ReturnVoucherProvider = ({
   children,
@@ -73,7 +76,10 @@ export const ReturnVoucherProvider = ({
         lastUpdatedReturnVoucher,
         setLastUpdatedReturnVoucher: (voucher: _Voucher) => {
           setLastUpdatedReturnVoucher(voucher);
-          localStorage.setItem("lastUpdatedReturnVoucher", JSON.stringify(voucher));
+          localStorage.setItem(
+            "lastUpdatedReturnVoucher",
+            JSON.stringify(voucher)
+          );
         },
         lastUpdatedReturnVoucherDate,
         setLastUpdatedReturnVoucherDate: (date: string) => {
@@ -86,9 +92,15 @@ export const ReturnVoucherProvider = ({
           localStorage.setItem("submissionDate", date);
         },
         pushedReturnVoucherRanges,
-        setPushedReturnVoucherRanges: (ranges: PushedReturnVoucherRanges) => {
-          setPushedReturnVoucherRanges(ranges);
-          localStorage.setItem("pushedReturnVoucherRanges", JSON.stringify(ranges));
+        setPushedReturnVoucherRanges: (updater) => {
+          setPushedReturnVoucherRanges((prev) => {
+            const newRanges = updater(prev);
+            localStorage.setItem(
+              "pushedReturnVoucherRanges",
+              JSON.stringify(newRanges)
+            );
+            return newRanges;
+          });
         },
       }}
     >

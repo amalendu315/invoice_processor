@@ -40,14 +40,35 @@ const InvoiceReturnForm = () => {
       if (!response?.ok) {
         toast.error("No Data Found");
       } else {
+        const testKeywords = ["test", "dummy", "demo", "xyz", "airline test"]; // Add more if needed
+
         const sortedVouchers = [...data.data]
-          .filter((voucher) => voucher.Types === "Invoice Return")
-          .sort((a, b) => a.InvoiceNo - b.InvoiceNo);
+          .filter(
+            (voucher) =>
+              voucher.Types === "Invoice Return" &&
+              !testKeywords.some(
+                (keyword) =>
+                  voucher.AccountName?.toLowerCase().includes(keyword) // Exclude test accounts
+              )
+          )
+          .sort((a, b) => {
+            // First sort by InvoiceNo (ascending order)
+            if (a.InvoiceNo !== b.InvoiceNo) {
+              return a.InvoiceNo - b.InvoiceNo; // Change to `b.InvoiceNo - a.InvoiceNo` for descending
+            }
+
+            // If InvoiceNo is the same, sort by SaleEntryDate (newest first)
+            return (
+              new Date(b.SaleEntryDate).getTime() -
+              new Date(a.SaleEntryDate).getTime()
+            );
+          });
+
         setVouchers(sortedVouchers);
         const totalFinalRate = sortedVouchers?.reduce((acc, voucher) => {
           const voucherFinalRate =
-            typeof voucher.FinalRate === "number"
-              ? voucher.FinalRate * voucher.pax
+            typeof voucher?.FinalRate === "number"
+              ? voucher?.FinalRate * voucher?.pax
               : 0;
           return acc + voucherFinalRate;
         }, 0);
@@ -66,7 +87,7 @@ const InvoiceReturnForm = () => {
   };
 
   const handleSubmitToCloud = async () => {
-    if (selectedEntries.length <= 0) {
+    if (selectedEntries.length === 0) {
       toast.error(`Please select at least one voucher to push!`);
       return;
     }
@@ -77,32 +98,42 @@ const InvoiceReturnForm = () => {
       const currentDate = new Date().toISOString().split("T")[0];
       setSubmissionDate(currentDate);
 
-      const firstSelectedVoucher = vouchers[selectedEntries[0]];
-      const lastSelectedVoucherIndex =
-        selectedEntries[selectedEntries.length - 1];
-      const lastSelectedVoucher = vouchers[lastSelectedVoucherIndex];
+      const firstSelectedVoucher = vouchers.find(
+        (v) => v.InvoiceID === selectedEntries[0]
+      );
+      const lastSelectedVoucher = vouchers.find(
+        (v) => v.InvoiceID === selectedEntries[selectedEntries.length - 1]
+      );
 
       const rangeKey = `${dateRange.start}-${dateRange.end}`;
 
       for (let i = 0; i < selectedEntries.length; i += vouchersPerRequest) {
         const dataForCloud = selectedEntries
           .slice(i, i + vouchersPerRequest)
-          .map((index) => {
-            const voucher = vouchers[index];
+          .map((invoiceNo) => {
+            const voucher = vouchers.find((v) => v.InvoiceNo === invoiceNo);
+
+            if (!voucher) {
+              console.warn(`⚠️ Missing voucher for InvoiceNo: ${invoiceNo}`);
+              return null;
+            }
 
             if (
               pushedReturnVoucherRanges[rangeKey] &&
               (voucher.InvoiceNo ===
                 pushedReturnVoucherRanges[rangeKey].startVoucher ||
-                voucher.InvoiceNo === pushedReturnVoucherRanges[rangeKey].endVoucher)
+                voucher.InvoiceNo ===
+                  pushedReturnVoucherRanges[rangeKey].endVoucher)
             ) {
               toast.error(`Voucher ${voucher.InvoiceNo} already pushed!`);
-              return undefined;
+              return null;
             }
 
-            let ledgerName = voucher.AccountName;
-            const ledgerPrefix = voucher.FinPrefix === "ASCN/24-25/" ? "SR/24-25/" : ""
-            if (voucher.Country && voucher.Country.toLowerCase() === "nepal") {
+            let ledgerName = voucher.AccountName ?? "Unknown Ledger";
+            const ledgerPrefix =
+              voucher.FinPrefix === "ASCN/24-25/" ? "SR/24-25/" : "";
+
+            if (voucher.Country?.toLowerCase() === "nepal") {
               ledgerName = "Air IQ Nepal";
             }
 
@@ -110,33 +141,44 @@ const InvoiceReturnForm = () => {
               branchName: "AirIQ",
               vouchertype: "Credit Note",
               voucherno: `${ledgerPrefix}${voucher.InvoiceNo}`,
-              voucherdate: voucher.SaleEntryDate.split("T")[0].replace(
-                /-/g,
-                "/"
-              ),
-              narration: `${voucher.Pnr} | PAX :- ${voucher.pax}`,
+              voucherdate: voucher.SaleEntryDate
+                ? voucher.SaleEntryDate.split("T")[0].replace(/-/g, "/")
+                : "N/A",
+              narration: `${voucher.Pnr ?? "Unknown PNR"} | PAX :- ${
+                voucher.pax ?? 0
+              }`,
               ledgerAllocation: [
                 {
                   lineno: 1,
                   ledgerName: ledgerName,
-                  ledgerAddress: `${voucher.Add1}, ${voucher.Add2}, ${voucher.CityName} - ${voucher.Pin}`,
-                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                  ledgerAddress: `${voucher.Add1 ?? ""}, ${
+                    voucher.Add2 ?? ""
+                  }, ${voucher.CityName ?? ""} - ${voucher.Pin ?? ""}`,
+                  amount: (
+                    (voucher.FinalRate ?? 0) * (voucher.pax ?? 0)
+                  ).toFixed(2),
                   drCr: "dr",
                 },
                 {
                   lineno: 2,
                   ledgerName: "Domestic Base Fare",
-                  amount: (voucher.FinalRate * voucher.pax).toFixed(2),
+                  amount: (
+                    (voucher.FinalRate ?? 0) * (voucher.pax ?? 0)
+                  ).toFixed(2),
                   drCr: "cr",
                 },
               ],
             };
-          });
+          })
+          .filter((voucher) => voucher !== null); // Remove any null values
 
-        if (dataForCloud.some((voucher) => voucher === undefined)) {
-          toast.error(`Some selected vouchers are already pushed!`);
-          throw new Error(`DataForCloud contains undefined vouchers!`);
+        if (dataForCloud.length === 0) {
+          toast.error(`No valid vouchers available for submission!`);
+          continue;
         }
+
+        console.log("🟢 Pushing Vouchers to Cloud:", dataForCloud);
+
         const response = await fetch("/api/return-cloud", {
           method: "POST",
           headers: {
@@ -146,79 +188,94 @@ const InvoiceReturnForm = () => {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Cloud server error:", response.status, errorText);
-          throw new Error(
-            `Cloud server responded with status ${response.status}`
-          );
-        } else {
-          if (i !== 0) {
-            toast.success(`${i} Vouchers Pushed!`);
-          }
+          console.error("Cloud server error:", response.status);
+          throw new Error(`Cloud server responded with status ${response.status}`);
         }
-      }
-      setPushedReturnVoucherRanges({
-        ...pushedReturnVoucherRanges,
-        [rangeKey]: {
-          startDate: format(
-            new Date(firstSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          endDate: format(
-            new Date(lastSelectedVoucher.SaleEntryDate),
-            "dd/MM/yyyy"
-          ),
-          startVoucher: firstSelectedVoucher.InvoiceNo,
-          endVoucher: lastSelectedVoucher.InvoiceNo,
-        },
-      });
 
-      setLastUpdatedReturnVoucher(lastSelectedVoucher);
-      const lastVoucherDate = lastSelectedVoucher.InvoiceEntryDate;
-      if (lastVoucherDate) {
-        const formattedDate = new Date(lastVoucherDate)
-          .toISOString()
-          .split("T")[0];
-        setLastUpdatedReturnVoucherDate(formattedDate);
+        toast.success(`Batch ${i / vouchersPerRequest + 1} Vouchers Pushed!`);
+      }
+
+      // ✅ Update pushed voucher ranges
+      if (firstSelectedVoucher && lastSelectedVoucher) {
+        setPushedReturnVoucherRanges((prev) => ({
+          ...prev,
+          [rangeKey]: {
+            startDate: format(
+              new Date(firstSelectedVoucher?.SaleEntryDate ?? ""),
+              "dd/MM/yyyy"
+            ),
+            endDate: format(
+              new Date(lastSelectedVoucher?.SaleEntryDate ?? ""),
+              "dd/MM/yyyy"
+            ),
+            startVoucher: firstSelectedVoucher?.InvoiceNo ?? 0,
+            endVoucher: lastSelectedVoucher?.InvoiceNo ?? 0,
+          },
+        }));
+
+
+        setLastUpdatedReturnVoucher(lastSelectedVoucher);
+
+        if (lastSelectedVoucher.InvoiceEntryDate) {
+          setLastUpdatedReturnVoucherDate(
+            new Date(lastSelectedVoucher.InvoiceEntryDate)
+              .toISOString()
+              .split("T")[0]
+          );
+        }
       }
 
       toast.success("Vouchers Submitted Successfully!");
     } catch (error) {
-      console.error("Error submitting data:", error);
+      console.error("❌ Error submitting data:", error);
       toast.error("Error Submitting Data To Cloud!");
     } finally {
       setIsCloudLoading(false);
     }
   };
 
+
   const handleExportToExcel = () => {
+    // If no vouchers are available
     if (vouchers.length === 0) {
       toast.error("No data available to export!");
       return;
     }
 
-    const formattedData = vouchers.map((voucher) => ({
+    // Check if there are selected vouchers
+    const selectedVouchers =
+      selectedEntries.length > 0
+        ? vouchers.filter((voucher) =>
+            selectedEntries.includes(voucher.InvoiceNo)
+          )
+        : vouchers; // If nothing is selected, export all
+
+    // Format the data for Excel
+    const formattedData = selectedVouchers.map((voucher) => ({
       InvoiceNo: voucher.InvoiceNo,
       SaleEntryDate: voucher.SaleEntryDate,
       Pnr: voucher.Pnr,
       Pax: voucher.pax,
       AccountName: voucher.AccountName,
-      Country: voucher.Country,
+      Country: voucher.Country ?? voucher.CityName, // Fix null issue
       FinalRate: voucher.FinalRate,
       TotalAmount: voucher.FinalRate * voucher.pax,
     }));
 
+    if (formattedData.length === 0) {
+      toast.error("No selected vouchers available to export!");
+      return;
+    }
+
+    // Create and download the Excel file
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Invoice Return Vouchers"
-    );
-    XLSX.writeFile(workbook, "Invoice_Return_Vouchers.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vouchers");
+    XLSX.writeFile(workbook, "Selected_Vouchers.xlsx");
 
     toast.success("Excel file has been downloaded successfully!");
   };
+
 
   return (
     <>

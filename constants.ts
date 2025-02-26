@@ -21,35 +21,44 @@ export interface _Voucher {
   CityName: string;
   Phone: string;
   Email: string;
-  Types:string;
+  Types: string;
+  MainCityID: 526;
+  CountryID: number;
+  CountryMain: string,
+  CityEntryMainID: number,
+  State: string;
 }
 
-// export const _vouchers:_Voucher[] = [
-//     {
-//       InvoiceID: 2012093,
-//       InvoiceNo: 614002,
-//       SaleID: 2722853,
-//       FinYID: 3,
-//       InvoiceEntryDate: "2024-11-11T10:15:15",
-//       Prefix: "AQ",
-//       Pnr: "AHSMWX",
-//       AccountName: "CYBER TRAVELS",
-//       DisplayRate: 0.0,
-//       FinalRate: 7050.0,
-//       SaleEntryDate: "2024-11-09T11:36:00",
-//       FinPrefix
-//     },
-//     {
-//       InvoiceID: 2015361,
-//       InvoiceNo: 617270,
-//       SaleID: 2726402,
-//       FinYID: 3,
-//       InvoiceEntryDate: "2024-11-11T10:15:15",
-//       Prefix: "AQ",
-//       Pnr: "I66VGM",
-//       AccountName: "VISHAL TOUR TRAVEL",
-//       DisplayRate: 0.0,
-//       FinalRate: 7050.0,
-//       SaleEntryDate: "2024-11-10T14:03:00",
-//     },
-//   ];
+// {
+//             "InvoiceID": 2257415,
+//             "InvoiceNo": 852857,
+//             "SaleID": 2989221,
+//             "FinYID": 3,
+//             "InvoiceEntryDate": "2025-02-22T10:03:49",
+//             "Prefix": "AQ",
+//             "Pnr": "GUU3NF",
+//             "AccountName": "SKY TRAVELS (ASSAM)",
+//             "DisplayRate": 0.00,
+//             "FinalRate": 4250.00,
+//             "SaleEntryDate": "2025-02-21T14:50:00",
+//             "FinFromDt": "2024-04-01T00:00:00",
+//             "FinToDt": "2025-03-31T00:00:00",
+//             "FinPrefix": "AQ/24-25/",
+//             "pax": 1,
+//             "Add1": "CHAMBER ROAD",
+//             "Add2": "TINSUKIA",
+//             "Pin": "786125",
+//             "Country": "India",
+//             "CityName": "Tinsukia",
+//             "Phone": "9954520111",
+//             "Email": "sky.tsk1@gmail.com",
+//             "FromSector": "IXB",
+//             "ToSectors": "CCU",
+//             "AirlineCode": "6E",
+//             "MainCityID": 526,
+//             "CountryID": 1,
+//             "CountryMain": null,
+//             "CityEntryMainID": 526,
+//             "State": "Assam",
+//             "Types": "Invoice"
+//         },
