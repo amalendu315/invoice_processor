@@ -134,6 +134,7 @@ const VoucherForm = () => {
 
 
  const handleExportToExcel = () => {
+
    // If no vouchers are available
    if (vouchers.length === 0) {
      toast.error("No data available to export!");
@@ -144,9 +145,11 @@ const VoucherForm = () => {
    const selectedVouchers =
      selectedEntries.length > 0
        ? vouchers.filter((voucher) =>
-           selectedEntries.includes(voucher.InvoiceID)
+           {
+              return selectedEntries.includes(voucher.InvoiceNo)
+           }
          )
-       : vouchers; // If nothing is selected, export all
+       : []; // If nothing is selected, export all
 
    // Format the data for Excel
    const formattedData = selectedVouchers.map((voucher) => ({

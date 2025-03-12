@@ -162,10 +162,12 @@ const filteredVouchers = useMemo(() => {
 
   const handleSelectAllChange = () => {
     setSelectAll(!selectAll);
-
     if (!selectAll) {
+       console.log("selectAll", selectAll);
       // Select only the currently filtered vouchers
-      onSelect(filteredVouchers.map((voucher) => voucher.InvoiceNo));
+      onSelect(filteredVouchers.map((voucher) => {
+        return voucher.InvoiceNo;
+      }));
       
     } else {
       // Deselect all
